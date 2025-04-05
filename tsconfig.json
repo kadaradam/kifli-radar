@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    /* Path Aliases */
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./src/*"],
+      "@server/*": ["src/server/*"],
+      "@client/*": ["src/app/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist", "sst.config.js"]
+}

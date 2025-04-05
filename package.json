@@ -1,0 +1,39 @@
+{
+  "name": "kifli-radar",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "dev:webhook": "tsc --watch src/lambda/dev.ts --outDir ./dist",
+    "sst:init": "ts-node scripts/init.ts",
+    "read-resources": "ts-node scripts/read-resources.ts",
+    "format": "biome format --write .",
+    "lint": "biome lint .",
+    "check": "biome check --write .",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "packageManager": "pnpm@8.15.4",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.777.0",
+    "@aws-sdk/util-dynamodb": "^3.777.0",
+    "@grammyjs/conversations": "github:grammyjs/conversations",
+    "@grammyjs/ratelimiter": "^1.2.1",
+    "grammy": "^1.35.1",
+    "sst": "3.11.11",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@ngrok/ngrok": "^1.4.1",
+    "@types/aws-lambda": "8.10.148",
+    "@types/node": "^22.13.14",
+    "chalk": "^5.4.1",
+    "dotenv": "^16.4.7",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  }
+}
