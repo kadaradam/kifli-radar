@@ -34,7 +34,13 @@ export default $config({
         productId: "number",
       },
       primaryIndex: { hashKey: "userId", rangeKey: "productId" },
-      globalIndexes: {},
+      globalIndexes: {
+        userProductsIndex: {
+          hashKey: "userId",
+          rangeKey: "productId",
+          projection: "all",
+        },
+      },
     });
 
     new sst.aws.Cron("FetchProductsCron", {
