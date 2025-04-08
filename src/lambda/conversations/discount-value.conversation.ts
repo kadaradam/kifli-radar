@@ -57,10 +57,13 @@ export const askForDiscountValue =
       ctx.session = session;
     });
 
-    await ctx.reply(
-      `🎉 Kész tesó! Figyeljük a terméket, és szólok ha ${input}% kedvezmény lesz rajta! 🚀`,
-      { parse_mode: "Markdown" },
-    );
+    await Promise.all([
+      ctx.react("❤️"),
+      ctx.reply(
+        `🎉 Kész tesó! Figyeljük a terméket, és szólok ha ${input}% kedvezmény lesz rajta! 🚀`,
+        { parse_mode: "Markdown" },
+      ),
+    ]);
 
     return; // Exit conversation when valid input is received
   };

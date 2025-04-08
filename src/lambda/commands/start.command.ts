@@ -60,9 +60,12 @@ export const startCommand =
 
     ctx.session.userAuthenticatedCache = true;
 
-    await ctx.reply(
-      "Yoo, most már be vagy léptetve! Nézz szét a parancsok között és sok sikert az akció vadászathoz! 🚀",
-    );
+    await Promise.all([
+      ctx.react("🔥"),
+      ctx.reply(
+        "Yoo, most már be vagy léptetve! Nézz szét a parancsok között és sok sikert az akció vadászathoz! 🚀🎯",
+      ),
+    ]);
   };
 
 async function createUser(
