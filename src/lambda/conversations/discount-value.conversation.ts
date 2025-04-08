@@ -1,4 +1,9 @@
-import { type DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
+import {
+  ConditionalCheckFailedException,
+  type DynamoDBClient,
+  PutItemCommand,
+  UpdateItemCommand,
+} from "@aws-sdk/client-dynamodb";
 import type { Conversation } from "@grammyjs/conversations";
 import { Resource } from "sst";
 import type { AppContext } from "../context";
@@ -76,18 +81,45 @@ async function createWatchProduct(
 ): Promise<void> {
   const now = new Date().toISOString();
 
-  await dbClient.send(
-    new PutItemCommand({
-      TableName: Resource.WatchProductsTable.name,
-      Item: {
-        productId: { N: productId.toString() },
-        productName: { S: productName },
-        userId: { N: userId.toString() },
-        minDiscountPercentage: { N: minDiscountPercentage.toString() },
-        isActive: { BOOL: true },
-        createdAt: { S: now },
-        updatedAt: { S: now },
-      },
-    }),
-  );
+  try {
+    // First try to update if item exists and is deleted
+    await dbClient.send(
+      new UpdateItemCommand({
+        TableName: Resource.WatchProductsTable.name,
+        Key: {
+          userId: { N: userId.toString() },
+          productId: { N: productId.toString() },
+        },
+        UpdateExpression:
+          "SET updatedAt = :updatedAt, minDiscountPercentage = :minDiscountPercentage REMOVE deletedAt",
+        ConditionExpression: "attribute_exists(deletedAt)",
+        ExpressionAttributeValues: {
+          ":updatedAt": { S: now },
+          ":minDiscountPercentage": { N: minDiscountPercentage.toString() },
+        },
+      }),
+    );
+  } catch (error) {
+    if (
+      error instanceof
+      ConditionalCheckFailedException /* && error.name === "ConditionalCheckFailedException" */
+    ) {
+      // If item doesn't exist or isn't deleted, create new item
+      await dbClient.send(
+        new PutItemCommand({
+          TableName: Resource.WatchProductsTable.name,
+          Item: {
+            productId: { N: productId.toString() },
+            productName: { S: productName },
+            userId: { N: userId.toString() },
+            minDiscountPercentage: { N: minDiscountPercentage.toString() },
+            createdAt: { S: now },
+            updatedAt: { S: now },
+          },
+        }),
+      );
+    } else {
+      throw error;
+    }
+  }
 }

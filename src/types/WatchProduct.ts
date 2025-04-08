@@ -3,7 +3,6 @@ export interface WatchProduct {
   productId: number;
   productName: string;
   minDiscountPercentage: number;
-  isActive: boolean;
   isDeleted?: boolean;
   lastNotifiedAt?: Date;
   notifyAfter?: Date;

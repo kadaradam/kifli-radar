@@ -84,13 +84,14 @@ const isProductAlreadyWatched = async (
   const product = await dbClient.send(
     new QueryCommand({
       TableName: Resource.WatchProductsTable.name,
-      IndexName: "byProductId",
       KeyConditionExpression: "productId = :pid AND userId = :uid",
+      FilterExpression: "attribute_not_exists(deletedAt)",
       ExpressionAttributeValues: {
         ":pid": { N: productId.toString() },
         ":uid": { N: userId.toString() },
       },
       Limit: 1,
+      ProjectionExpression: "userId",
     }),
   );
 

@@ -65,13 +65,12 @@ const getUserProducts = async (
   const products = await dbClient.send(
     new QueryCommand({
       TableName: Resource.WatchProductsTable.name,
-      IndexName: "byUserId",
       KeyConditionExpression: "userId = :uid",
-      FilterExpression: "isActive = :active",
+      FilterExpression: "attribute_not_exists(deletedAt)",
       ExpressionAttributeValues: {
         ":uid": { N: userId.toString() },
-        ":active": { BOOL: true },
       },
+      ProjectionExpression: "productId, productName",
     }),
   );
 

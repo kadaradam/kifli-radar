@@ -18,17 +18,9 @@ export default $config({
     const usersTable = new sst.aws.Dynamo("UsersTable", {
       fields: {
         id: "number",
-        notifyAfterPK: "string",
-        notifyAfter: "string",
       },
       primaryIndex: { hashKey: "id" },
-      globalIndexes: {
-        byNotifyAfter: {
-          hashKey: "notifyAfterPK",
-          rangeKey: "notifyAfter",
-          projection: "all",
-        },
-      },
+      globalIndexes: {},
       transform: {
         table: {
           billingMode: "PAY_PER_REQUEST",
@@ -42,18 +34,7 @@ export default $config({
         productId: "number",
       },
       primaryIndex: { hashKey: "userId", rangeKey: "productId" },
-      globalIndexes: {
-        byProductId: {
-          hashKey: "productId",
-          rangeKey: "userId",
-          projection: "all",
-        },
-        byUserId: {
-          hashKey: "userId",
-          rangeKey: "productId",
-          projection: "all",
-        },
-      },
+      globalIndexes: {},
     });
 
     new sst.aws.Cron("FetchProductsCron", {
