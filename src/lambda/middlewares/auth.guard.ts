@@ -60,6 +60,7 @@ async function checkDBUserAuthenticated(
     new GetItemCommand({
       TableName: Resource.UsersTable.name,
       Key: { id: { N: userId.toString() } },
+      ProjectionExpression: "id",
     }),
   );
 
