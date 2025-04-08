@@ -33,6 +33,8 @@ const removeUserProduct = async (
   dbClient: DynamoDBClient,
   { userId, productId }: { userId: number; productId: string },
 ): Promise<void> => {
+  const now = new Date().toISOString();
+
   await dbClient.send(
     new UpdateItemCommand({
       TableName: Resource.WatchProductsTable.name,
@@ -40,10 +42,10 @@ const removeUserProduct = async (
         userId: { N: userId.toString() },
         productId: { N: productId },
       },
-      UpdateExpression: "SET isActive = :inactive, updatedAt = :now",
+      UpdateExpression: "SET deletedAt = :deletedAt, updatedAt = :now",
       ExpressionAttributeValues: {
-        ":inactive": { BOOL: false },
-        ":now": { S: new Date().toISOString() },
+        ":deletedAt": { S: now },
+        ":now": { S: now },
       },
     }),
   );

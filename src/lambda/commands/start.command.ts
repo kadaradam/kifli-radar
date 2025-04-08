@@ -2,8 +2,8 @@ import { type DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
 import type { CommandContext } from "grammy";
 import type { BotCommand } from "grammy/types";
 import { Resource } from "sst";
+import { config } from "~/config";
 import { commandName } from "~/utils/commands";
-import { config } from "../config";
 import type { AppContext } from "../context";
 import { env } from "../env";
 
@@ -61,7 +61,7 @@ export const startCommand =
     ctx.session.userAuthenticatedCache = true;
 
     await ctx.reply(
-      "Yoo, most már be vagy léptetve! Figyeljük a termékeket faszi! 🚀",
+      "Yoo, most már be vagy léptetve! Nézz szét a parancsok között és sok sikert az akció vadászathoz! 🚀",
     );
   };
 
@@ -86,6 +86,10 @@ async function createUser(
         id: { N: userId.toString() },
         firstName: { S: firstName },
         lastName: { S: lastName },
+        sleepEnabled: { BOOL: true },
+        sleepFrom: { S: "23:00" },
+        sleepTo: { S: "07:00" },
+        timezone: { S: "Europe/Budapest" }, // TODO: Later auto detect timezone
         createdAt: { S: now },
         updatedAt: { S: now },
       },

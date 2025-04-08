@@ -5,7 +5,6 @@ export interface WatchProduct {
   minDiscountPercentage: number;
   isDeleted?: boolean;
   lastNotifiedAt?: Date;
-  notifyAfter?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

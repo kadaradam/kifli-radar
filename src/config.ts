@@ -1,9 +1,9 @@
 interface AppConfig {
   MAX_LOGIN_ATTEMPTS: number;
-  MAX_SNOOZE_HOURS: number;
+  NEW_NOTIFICATION_THRESHOLD_IN_HOURS: number;
 }
 
 export const config: AppConfig = {
   MAX_LOGIN_ATTEMPTS: 5,
-  MAX_SNOOZE_HOURS: 48,
+  NEW_NOTIFICATION_THRESHOLD_IN_HOURS: 24,
 };

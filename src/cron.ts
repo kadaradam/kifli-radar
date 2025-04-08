@@ -1,12 +1,14 @@
 import {
   DynamoDBClient,
-  QueryCommand,
   ScanCommand,
+  UpdateItemCommand,
+  type UpdateItemCommandOutput,
 } from "@aws-sdk/client-dynamodb";
 import { unmarshall } from "@aws-sdk/util-dynamodb";
 import type { APIGatewayProxyResult } from "aws-lambda";
 import { Api } from "grammy";
 import { Resource } from "sst";
+import { config } from "~/config";
 import { KifliService } from "~/services/kifli.service";
 import type { KifliLastMinuteProduct, User, WatchProduct } from "./types";
 
@@ -18,23 +20,29 @@ export const handler = async (): Promise<APIGatewayProxyResult> => {
   console.log("Cron job triggered at", new Date().toISOString());
 
   try {
-    const [products, snoozedUsers] = await Promise.all([
-      getProducts(),
-      getSnoozedUsers(),
+    const [notifiableProducts, notifiableUsers] = await Promise.all([
+      getNotifiableProducts(),
+      getNotifiableUsers(),
     ]);
 
-    console.log(`Found ${products.length} active watch products`);
-    console.log(`Found ${snoozedUsers.length} snoozed users`);
+    console.log(`Found ${notifiableProducts.length} notifiable products`);
+    console.log(`Found ${notifiableUsers.length} notifiable users`);
 
-    const discountedProducts = await findDiscountedProducts(
-      products,
-      snoozedUsers,
+    // Filter out users that are not notifiable
+    const products = notifiableProducts.filter((product) =>
+      notifiableUsers.some((user) => user.id === product.userId),
+    );
+
+    const discountedProducts = await findDiscountedProducts(products);
+
+    console.log(
+      `Found ${Object.keys(discountedProducts).length} discounted products`,
     );
 
     let totalDiscountedProducts = 0;
 
-    for (const chatId in discountedProducts) {
-      const products = discountedProducts[chatId];
+    for (const userId in discountedProducts) {
+      const products = discountedProducts[userId];
 
       if (!products) {
         continue;
@@ -42,15 +50,15 @@ export const handler = async (): Promise<APIGatewayProxyResult> => {
 
       totalDiscountedProducts += products.length;
 
-      await sendDiscountNotification(chatId, products);
+      await sendDiscountNotification(userId, products);
     }
 
-    await updateLastNotifiedAt(discountedProducts);
+    console.log(`Sent total of ${totalDiscountedProducts} notifications`);
 
     return {
       statusCode: 200,
       body: JSON.stringify({
-        message: `Cron job executed successfully! Total discounted products: ${totalDiscountedProducts}`,
+        message: "Cron job executed successfully!",
       }),
     };
   } catch (error) {
@@ -69,12 +77,8 @@ export const handler = async (): Promise<APIGatewayProxyResult> => {
 
 async function findDiscountedProducts(
   watchList: WatchProduct[],
-  snoozedUsers: User[],
 ): Promise<Record<string, KifliLastMinuteProduct[]>> {
-  const productIds = watchList
-    .filter((watch) => watch.isActive)
-    .filter((watch) => !snoozedUsers.some((user) => user.id === watch.userId))
-    .map((watch) => watch.productId);
+  const productIds = watchList.map((watch) => watch.productId);
 
   const products =
     await kifliService.fetchLastMinuteStatusForProducts(productIds);
@@ -153,85 +157,134 @@ async function sendDiscountNotification(
 
   messageText += "🎉 *Ne hagyd, hogy lecsússz róluk, kapd el, amíg még van\\!*";
 
-  // Create inline snooze buttons for the last product
-  /* const lastProduct = products[products.length - 1];
-  const keyboard = new InlineKeyboard();
-
-  if (lastProduct) {
-    keyboard
-      .text("2 óra off 🛋️", `snooze:${lastProduct.productId}_2`)
-      .text("4 óra off 🛋️", `snooze:${lastProduct.productId}_4`)
-      .row()
-      .text("8 óra off 🛋️", `snooze:${lastProduct.productId}_8`)
-      .text("24 óra off 🛋️", `snooze:${lastProduct.productId}_24`);
-  } */
-
-  // Send the message
+  // Send the message first
   await api.sendMessage(userId, messageText, {
     parse_mode: "MarkdownV2",
   });
 
-  // Set a timer to remove the buttons after 5 minutes
-  /*  setTimeout(
-    async () => {
-      await api.editMessageReplyMarkup(userId, message.message_id, {
-        reply_markup: undefined,
-      });
-    },
-    5 * 60 * 1000,
-  ); */
+  const now = new Date().toISOString();
+  const productIds = products.map((product) => product.productId);
+
+  await Promise.all([
+    updateUserLastNotifiedAt(userId, now),
+    updateProductsLastNotifiedAt(userId, productIds, now),
+  ]);
 }
 
-async function getProducts(): Promise<WatchProduct[]> {
-  const now = new Date().toISOString();
+// TODO: Create user and product services
 
+async function getNotifiableProducts(): Promise<WatchProduct[]> {
   const result = await dbClient.send(
+    // TODO: add index to deletedAt
     new ScanCommand({
       TableName: Resource.WatchProductsTable.name,
-      FilterExpression:
-        "isActive = :active AND (attribute_not_exists(notifyAfter) OR notifyAfter < :now)",
-      ExpressionAttributeValues: {
-        ":active": { BOOL: true },
-        ":now": { S: now },
-      },
+      FilterExpression: "attribute_not_exists(deletedAt)",
+      ProjectionExpression:
+        "productId, productName, userId, minDiscountPercentage, lastNotifiedAt",
     }),
-    /* new QueryCommand({
-      TableName: Resource.WatchProductsTable.name,
-      IndexName: "byNotifyAfter",
-      KeyConditionExpression: "isActive = :active AND notifyAfter < :now",
-      ExpressionAttributeValues: {
-        ":active": { BOOL: true },
-        ":now": { S: now },
-      },
-    }), */
   );
 
-  return result.Items?.map((item) => unmarshall(item) as WatchProduct) ?? [];
+  const products =
+    result.Items?.map((item) => unmarshall(item) as WatchProduct) ?? [];
+
+  return products.filter((product) => {
+    // Filter out products that were notified in the last 24 hours
+
+    if (!product.lastNotifiedAt) {
+      return true;
+    }
+
+    const diffHours =
+      (Date.now() - new Date(product.lastNotifiedAt).getTime()) /
+      (1000 * 60 * 60);
+    return diffHours >= config.NEW_NOTIFICATION_THRESHOLD_IN_HOURS;
+  });
 }
 
-async function getSnoozedUsers(): Promise<User[]> {
-  const now = new Date().toISOString();
+async function getNotifiableUsers(): Promise<
+  Pick<User, "id" | "sleepEnabled" | "sleepFrom" | "sleepTo" | "timezone">[]
+> {
   const result = await dbClient.send(
-    new QueryCommand({
+    new ScanCommand({
       TableName: Resource.UsersTable.name,
-      IndexName: "byNotifyAfter",
-      KeyConditionExpression: "notifyAfterPK = :gsi1pk AND notifyAfter > :now",
-      ExpressionAttributeValues: {
-        ":gsi1pk": { S: "USER_WITH_NOTIFY_AFTER" },
-        ":now": { S: now },
+      ProjectionExpression: "id, sleepEnabled, sleepFrom, sleepTo, #tz",
+      ExpressionAttributeNames: {
+        "#tz": "timezone",
       },
     }),
   );
 
-  return result.Items?.map((item) => unmarshall(item) as User) ?? [];
+  const users = result.Items?.map((item) => unmarshall(item) as User) ?? [];
+
+  return users.filter((user) => {
+    // Auto include users that are not sleeping
+    if (!user.sleepEnabled || !user.timezone) {
+      return true;
+    }
+
+    const now = getTimeInTimeZone(user.timezone);
+
+    const nowHours = now.getHours();
+    const nowMinutes = now.getMinutes();
+
+    const [sleepFromHours, sleepFromMinutes] = user.sleepFrom
+      .split(":")
+      .map(Number);
+    const [sleepToHours, sleepToMinutes] = user.sleepTo.split(":").map(Number);
+
+    // If any of the sleep times are invalid, we should notify the user
+    if (
+      [sleepFromHours, sleepFromMinutes, sleepToHours, sleepToMinutes].some(
+        Number.isNaN,
+      )
+    ) {
+      return true;
+    }
+
+    // Include users that are in sleep mode and the current time is not between the sleep times
+    return (
+      nowHours < sleepFromHours ||
+      (nowHours === sleepFromHours && nowMinutes < sleepFromMinutes) ||
+      nowHours > sleepToHours ||
+      (nowHours === sleepToHours && nowMinutes > sleepToMinutes)
+    );
+  });
 }
 
-async function updateLastNotifiedAt(
-  discountedProducts: Record<string, KifliLastMinuteProduct[]>,
-): Promise<void> {
-  const now = new Date().toISOString();
+async function updateUserLastNotifiedAt(
+  userId: string,
+  date: string,
+): Promise<UpdateItemCommandOutput> {
+  return dbClient.send(
+    new UpdateItemCommand({
+      TableName: Resource.UsersTable.name,
+      Key: { id: { N: userId } },
+      UpdateExpression: "SET lastNotifiedAt = :now",
+      ExpressionAttributeValues: { ":now": { S: date } },
+    }),
+  );
+}
 
-  const userIds = Object.keys(discountedProducts);
+async function updateProductsLastNotifiedAt(
+  userId: string,
+  productIds: number[],
+  date: string,
+): Promise<UpdateItemCommandOutput[]> {
+  return Promise.all(
+    productIds.map((productId) =>
+      dbClient.send(
+        new UpdateItemCommand({
+          TableName: Resource.WatchProductsTable.name,
+          Key: {
+            productId: { N: productId.toString() },
+            userId: { N: userId },
+          },
+          UpdateExpression: "SET lastNotifiedAt = :now",
+          ExpressionAttributeValues: { ":now": { S: date } },
+        }),
+      ),
+    ),
+  );
 }
 
 const escapeMarkdown = (text: string | number) => {
@@ -240,4 +293,12 @@ const escapeMarkdown = (text: string | number) => {
 
 const formatNumber = (num: number) => {
   return Number.isInteger(num) ? num : Number.parseFloat(num.toFixed(2));
+};
+
+const getTimeInTimeZone = (timezone: string) => {
+  const now = new Date();
+  const timeInTimeZone = new Date(
+    now.toLocaleString("en-US", { timeZone: timezone }),
+  );
+  return timeInTimeZone;
 };

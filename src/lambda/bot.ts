@@ -8,16 +8,15 @@ import {
   productAddCancelCallback,
   productAddConfirmCallback,
   productRemoveCallback,
-  productSnoozeCallback,
 } from "./callbacks";
 import {
   ADD_COMMAND_KEY,
   REMOVE_COMMAND_KEY,
-  SNOOZE_COMMAND_KEY,
+  SLEEP_COMMAND_KEY,
   START_COMMAND_KEY,
   addCommand,
   removeCommand,
-  snoozeCommand,
+  sleepCommand,
   startCommand,
 } from "./commands";
 import type { AppContext } from "./context";
@@ -58,7 +57,6 @@ bot.use(groupChatGuard()).use(authGuard(dbClient)).use(conversationGuard());
 // Must registered separately
 bot.callbackQuery(/^add_confirm\:(.+)$/, productAddConfirmCallback);
 bot.callbackQuery(/^add_cancel\:(.+)$/, productAddCancelCallback);
-bot.callbackQuery(/^snooze:(.+)_(\d+)$/, productSnoozeCallback(dbClient));
 bot.callbackQuery(/^remove\:(.+)$/, productRemoveCallback(dbClient));
 
 // Commands
@@ -66,8 +64,7 @@ bot.callbackQuery(/^remove\:(.+)$/, productRemoveCallback(dbClient));
 bot.command(START_COMMAND_KEY, startCommand(dbClient));
 bot.command(ADD_COMMAND_KEY, addCommand(dbClient, kifliService));
 bot.command(REMOVE_COMMAND_KEY, removeCommand(dbClient));
-bot.command(SNOOZE_COMMAND_KEY, snoozeCommand(dbClient));
-
+bot.command(SLEEP_COMMAND_KEY, sleepCommand(dbClient));
 // attach all middleware
 bot.on("message", async (ctx) => {
   if (ctx.message?.text?.startsWith("/")) return; // Ignore commands

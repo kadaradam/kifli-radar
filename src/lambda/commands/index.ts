@@ -9,10 +9,10 @@ export {
   removeCommandInfo,
 } from "./remove.command";
 export {
-  SNOOZE_COMMAND_KEY,
-  snoozeCommand,
-  snoozeCommandInfo,
-} from "./snooze.command";
+  SLEEP_COMMAND_KEY,
+  sleepCommand,
+  sleepCommandInfo,
+} from "./sleep.command";
 export {
   START_COMMAND_KEY,
   startCommand,
