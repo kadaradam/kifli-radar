@@ -23,6 +23,7 @@
     "@grammyjs/ratelimiter": "^1.2.1",
     "grammy": "^1.35.1",
     "sst": "3.11.11",
+    "tz-lookup": "^6.1.25",
     "zod": "^3.24.2"
   },
   "devDependencies": {
@@ -30,6 +31,7 @@
     "@ngrok/ngrok": "^1.4.1",
     "@types/aws-lambda": "8.10.148",
     "@types/node": "^22.13.14",
+    "@types/tz-lookup": "^6.1.2",
     "chalk": "^5.4.1",
     "dotenv": "^16.4.7",
     "ts-node": "^10.9.2",

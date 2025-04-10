@@ -9,6 +9,7 @@ export interface SessionData {
   userAuthenticatedCache: boolean | undefined;
   userAuthAttempts: number;
   userWatchSelectedProduct: UserWatchSelectedProduct | undefined;
+  isUserRequestingLocation: boolean;
 }
 
 export const initialSessionData = (): SessionData => {
@@ -16,6 +17,7 @@ export const initialSessionData = (): SessionData => {
     userAuthenticatedCache: undefined,
     userAuthAttempts: 0,
     userWatchSelectedProduct: undefined,
+    isUserRequestingLocation: false,
   };
 };
 

@@ -4,6 +4,7 @@ import { Bot, session } from "grammy";
 
 import { KifliService } from "~/services/kifli.service";
 import {
+  handleTimezoneCallback,
   productAddCancelCallback,
   productAddConfirmCallback,
   productRemoveCallback,
@@ -18,6 +19,10 @@ import {
   sleepCommand,
   startCommand,
 } from "./commands";
+import {
+  TIMEZONE_COMMAND_KEY,
+  timezoneCommand,
+} from "./commands/timezone.command";
 import type { AppContext } from "./context";
 import {
   ASK_FOR_DISCOUNT_VALUE_KEY,
@@ -67,11 +72,18 @@ bot.command(START_COMMAND_KEY, startCommand);
 bot.command(ADD_COMMAND_KEY, addCommand(kifliService));
 bot.command(REMOVE_COMMAND_KEY, removeCommand);
 bot.command(SLEEP_COMMAND_KEY, sleepCommand);
+bot.command(TIMEZONE_COMMAND_KEY, timezoneCommand);
 
 // attach all middleware
 bot.on("message:text", async (ctx) => {
   if (ctx.message?.text?.startsWith("/")) return; // Ignore commands
   await ctx.reply("Szia tesó! Mit akarsz? 😎");
+});
+
+bot.on("message:location", (ctx) => {
+  if (ctx.session.isUserRequestingLocation) {
+    return handleTimezoneCallback(ctx);
+  }
 });
 
 // Listen for "my_chat_member" updates
