@@ -16,8 +16,7 @@ export const addCommandInfo: BotCommand = {
 };
 
 export const addCommand =
-  (dbClient: DynamoDBClient, kifliService: IKifliService) =>
-  async (ctx: CommandContext<AppContext>) => {
+  (kifliService: IKifliService) => async (ctx: CommandContext<AppContext>) => {
     const userId = ctx.from?.id;
     const url = ctx.match;
 
@@ -42,7 +41,7 @@ export const addCommand =
     const productImage = product.images[0];
 
     if (
-      await isProductAlreadyWatched(dbClient, {
+      await isProductAlreadyWatched(ctx.dbClient, {
         userId,
         productId: processedProductId,
       })

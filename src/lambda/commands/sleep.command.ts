@@ -30,66 +30,65 @@ export const sleepCommandInfo: BotCommand = {
   ].join("\n"),
 };
 
-export const sleepCommand =
-  (dbClient: DynamoDBClient) => async (ctx: CommandContext<AppContext>) => {
-    const userId = ctx.from?.id;
-    const params = ctx.match;
+export const sleepCommand = async (ctx: CommandContext<AppContext>) => {
+  const userId = ctx.from?.id;
+  const params = ctx.match;
 
-    if (!userId || !params) {
-      await ctx.reply(sleepCommandInfo.description);
-      return;
-    }
+  if (!userId || !params) {
+    await ctx.reply(sleepCommandInfo.description);
+    return;
+  }
 
-    if (params === "off") {
-      await turnOffSleepMode(dbClient, userId);
-      await ctx.reply(
-        "🔔 Értesítések mindig bekapcsolva! Most már akkor is értesítünk, ha épp szunyálsz 😈",
-      );
-      return;
-    }
-
-    if (params === "info") {
-      const sleepMode = await getSleepMode(dbClient, userId);
-
-      if (!sleepMode.sleepEnabled) {
-        await ctx.reply("🔔 Jelenlegi beállítás: Értesítések mindig");
-        return;
-      }
-
-      const fromTime = sleepMode.sleepFrom;
-      const toTime = sleepMode.sleepTo;
-
-      await ctx.reply(`😴 Pihi időszak: ${fromTime} - ${toTime}`);
-      return;
-    }
-
-    const [from, to] = params.split(" ");
-
-    if (!from || !to) {
-      await ctx.reply("❌ Hoppá! Hiányzó időpontok!");
-      return;
-    }
-
-    const fromTime = normalizeTime(from);
-    const toTime = normalizeTime(to);
-
-    if (!fromTime || !toTime) {
-      await ctx.reply(
-        "❌ Ejnye! Az időpontot «00:00 23:59» formában kérem szépen!",
-      );
-      return;
-    }
-
-    await turnOnSleepMode(dbClient, {
-      userId,
-      from: fromTime,
-      to: toTime,
-    });
-
+  if (params === "off") {
+    await turnOffSleepMode(ctx.dbClient, userId);
     await ctx.reply(
-      `🌙 Szundi mód beállítva! ${fromTime} és ${toTime} között csendben maradok 🤫`,
+      "🔔 Értesítések mindig bekapcsolva! Most már akkor is értesítünk, ha épp szunyálsz 😈",
     );
-  };
+    return;
+  }
+
+  if (params === "info") {
+    const sleepMode = await getSleepMode(ctx.dbClient, userId);
+
+    if (!sleepMode.sleepEnabled) {
+      await ctx.reply("🔔 Jelenlegi beállítás: Értesítések mindig");
+      return;
+    }
+
+    const fromTime = sleepMode.sleepFrom;
+    const toTime = sleepMode.sleepTo;
+
+    await ctx.reply(`😴 Pihi időszak: ${fromTime} - ${toTime}`);
+    return;
+  }
+
+  const [from, to] = params.split(" ");
+
+  if (!from || !to) {
+    await ctx.reply("❌ Hoppá! Hiányzó időpontok!");
+    return;
+  }
+
+  const fromTime = normalizeTime(from);
+  const toTime = normalizeTime(to);
+
+  if (!fromTime || !toTime) {
+    await ctx.reply(
+      "❌ Ejnye! Az időpontot «00:00 23:59» formában kérem szépen!",
+    );
+    return;
+  }
+
+  await turnOnSleepMode(ctx.dbClient, {
+    userId,
+    from: fromTime,
+    to: toTime,
+  });
+
+  await ctx.reply(
+    `🌙 Szundi mód beállítva! ${fromTime} és ${toTime} között csendben maradok 🤫`,
+  );
+};
 
 const normalizeTime = (time: string): string | null => {
   const [h, m] = time.split(":").map(Number);

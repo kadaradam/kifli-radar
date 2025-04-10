@@ -12,7 +12,7 @@ export const ASK_FOR_DISCOUNT_VALUE_KEY = "askForDiscountValue";
 
 // Define a conversation for asking a value (refactored)
 export const askForDiscountValue =
-  (dbClient: DynamoDBClient) =>
+  () =>
   async (
     conversation: Conversation<AppContext, AppContext>,
     ctx: AppContext,
@@ -42,7 +42,7 @@ export const askForDiscountValue =
     const productId = session.userWatchSelectedProduct.id;
     const productName = session.userWatchSelectedProduct.name;
 
-    await createWatchProduct(dbClient, {
+    await createWatchProduct(ctx.dbClient, {
       productId,
       productName,
       userId,
@@ -58,6 +58,7 @@ export const askForDiscountValue =
     });
 
     await Promise.all([
+      // @ts-ignore
       ctx.react("❤️"),
       ctx.reply(
         `🎉 Kész tesó! Figyeljük a terméket, és szólok ha ${input}% kedvezmény lesz rajta! 🚀`,
@@ -94,11 +95,12 @@ async function createWatchProduct(
           productId: { N: productId.toString() },
         },
         UpdateExpression:
-          "SET updatedAt = :updatedAt, minDiscountPercentage = :minDiscountPercentage REMOVE deletedAt",
+          "SET updatedAt = :updatedAt, minDiscountPercentage = :minDiscountPercentage, isActive = :isActive REMOVE deletedAt",
         ConditionExpression: "attribute_exists(deletedAt)",
         ExpressionAttributeValues: {
           ":updatedAt": { S: now },
           ":minDiscountPercentage": { N: minDiscountPercentage.toString() },
+          ":isActive": { S: "true" },
         },
       }),
     );

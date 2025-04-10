@@ -16,57 +16,56 @@ export const startCommandInfo: BotCommand = {
   description: `Jelszó beállítása. ${commandName(START_COMMAND_KEY)} «jelszó»`,
 };
 
-export const startCommand =
-  (dbClient: DynamoDBClient) => async (ctx: CommandContext<AppContext>) => {
-    const userId = ctx.from?.id;
-    const firstName = ctx.from?.first_name;
-    const lastName = ctx.from?.last_name;
-    const password = ctx.match;
+export const startCommand = async (ctx: CommandContext<AppContext>) => {
+  const userId = ctx.from?.id;
+  const firstName = ctx.from?.first_name;
+  const lastName = ctx.from?.last_name;
+  const password = ctx.match;
 
-    if (!userId || !firstName || !lastName) {
+  if (!userId || !firstName || !lastName) {
+    return;
+  }
+
+  if (!password) {
+    await ctx.reply(
+      `Tesó, add már meg a jelszót a ${commandName(START_COMMAND_KEY)} «jelszó» paranccsal!`,
+    );
+    return;
+  }
+
+  if (ctx.session.userAuthenticatedCache) {
+    await ctx.reply("Cimbi már be vagy jelentkezve, mit akarsz még? 😎");
+    return;
+  }
+
+  if (password !== env.APP_PASSWORD) {
+    const attempts = ++ctx.session.userAuthAttempts;
+
+    await ctx.reply(
+      `Bruh, ez nem jó! Próbálkozások száma: ${attempts}/${config.MAX_LOGIN_ATTEMPTS}`,
+    );
+
+    if (attempts >= config.MAX_LOGIN_ATTEMPTS) {
+      await ctx.banChatMember(userId);
       return;
     }
 
-    if (!password) {
-      await ctx.reply(
-        `Tesó, add már meg a jelszót a ${commandName(START_COMMAND_KEY)} «jelszó» paranccsal!`,
-      );
-      return;
-    }
+    return;
+  }
 
-    if (ctx.session.userAuthenticatedCache) {
-      await ctx.reply("Cimbi már be vagy jelentkezve, mit akarsz még? 😎");
-      return;
-    }
+  ctx.session.userAuthAttempts = 0;
 
-    if (password !== env.APP_PASSWORD) {
-      const attempts = ++ctx.session.userAuthAttempts;
+  await createUser(ctx.dbClient, { userId, firstName, lastName });
 
-      await ctx.reply(
-        `Bruh, ez nem jó! Próbálkozások száma: ${attempts}/${config.MAX_LOGIN_ATTEMPTS}`,
-      );
+  ctx.session.userAuthenticatedCache = true;
 
-      if (attempts >= config.MAX_LOGIN_ATTEMPTS) {
-        await ctx.banChatMember(userId);
-        return;
-      }
-
-      return;
-    }
-
-    ctx.session.userAuthAttempts = 0;
-
-    await createUser(dbClient, { userId, firstName, lastName });
-
-    ctx.session.userAuthenticatedCache = true;
-
-    await Promise.all([
-      ctx.react("🔥"),
-      ctx.reply(
-        "Yoo, most már be vagy léptetve! Nézz szét a parancsok között és sok sikert az akció vadászathoz! 🚀🎯",
-      ),
-    ]);
-  };
+  await Promise.all([
+    ctx.react("🔥"),
+    ctx.reply(
+      "Yoo, most már be vagy léptetve! Nézz szét a parancsok között és sok sikert az akció vadászathoz! 🚀🎯",
+    ),
+  ]);
+};
 
 async function createUser(
   dbClient: DynamoDBClient,

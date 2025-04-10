@@ -2,7 +2,6 @@ import { conversations, createConversation } from "@grammyjs/conversations";
 import { limit } from "@grammyjs/ratelimiter";
 import { Bot, session } from "grammy";
 
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { KifliService } from "~/services/kifli.service";
 import {
   productAddCancelCallback,
@@ -25,14 +24,22 @@ import {
   askForDiscountValue,
 } from "./conversations";
 import { env } from "./env";
-import { authGuard, conversationGuard, groupChatGuard } from "./middlewares";
+import {
+  authGuard,
+  conversationGuard,
+  db,
+  groupChatGuard,
+} from "./middlewares";
 import { getSessionKey, initialSessionData } from "./session";
 
 const botToken = env.TELEGRAM_BOT_TOKEN;
 
-const dbClient = new DynamoDBClient();
 const bot = new Bot<AppContext>(botToken);
 const kifliService = new KifliService();
+
+// Global services
+bot.use(db());
+
 bot
   // External plugins
   .use(limit())
@@ -43,30 +50,26 @@ bot
     }),
   )
   .use(conversations())
-  .use(
-    createConversation(
-      askForDiscountValue(dbClient),
-      ASK_FOR_DISCOUNT_VALUE_KEY,
-    ),
-  );
+  .use(createConversation(askForDiscountValue(), ASK_FOR_DISCOUNT_VALUE_KEY));
 
 // Middlewares
-bot.use(groupChatGuard()).use(authGuard(dbClient)).use(conversationGuard());
+bot.use(groupChatGuard()).use(authGuard()).use(conversationGuard());
 
 // Callbacks: Handle button clicks
 // Must registered separately
 bot.callbackQuery(/^add_confirm\:(.+)$/, productAddConfirmCallback);
 bot.callbackQuery(/^add_cancel\:(.+)$/, productAddCancelCallback);
-bot.callbackQuery(/^remove\:(.+)$/, productRemoveCallback(dbClient));
+bot.callbackQuery(/^remove\:(.+)$/, productRemoveCallback);
 
 // Commands
 // Must registered separately
-bot.command(START_COMMAND_KEY, startCommand(dbClient));
-bot.command(ADD_COMMAND_KEY, addCommand(dbClient, kifliService));
-bot.command(REMOVE_COMMAND_KEY, removeCommand(dbClient));
-bot.command(SLEEP_COMMAND_KEY, sleepCommand(dbClient));
+bot.command(START_COMMAND_KEY, startCommand);
+bot.command(ADD_COMMAND_KEY, addCommand(kifliService));
+bot.command(REMOVE_COMMAND_KEY, removeCommand);
+bot.command(SLEEP_COMMAND_KEY, sleepCommand);
+
 // attach all middleware
-bot.on("message", async (ctx) => {
+bot.on("message:text", async (ctx) => {
   if (ctx.message?.text?.startsWith("/")) return; // Ignore commands
   await ctx.reply("Szia tesó! Mit akarsz? 😎");
 });
