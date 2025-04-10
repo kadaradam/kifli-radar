@@ -1,13 +1,24 @@
 {
   "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "lib": ["ES2022"],
+    "declaration": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
     "strict": true,
-    /* Path Aliases */
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./src/*"],
-      "@server/*": ["src/server/*"],
-      "@client/*": ["src/app/*"]
-    }
+      "~/*": ["./src/*"]
+    },
+    "types": ["node"]
   },
+  "include": ["src/**/*", "sst-env.d.ts"],
   "exclude": ["node_modules", "dist", "sst.config.js"]
 }
