@@ -5,8 +5,7 @@
   "scripts": {
     "build": "tsc",
     "dev:webhook": "tsc --watch src/lambda/dev.ts --outDir ./dist",
-    "sst:init": "ts-node scripts/init.ts",
-    "read-resources": "ts-node scripts/read-resources.ts",
+    "sst:init": "ts-node --transpile-only -r tsconfig-paths/register src/scripts/init.ts",
     "format": "biome format --write .",
     "lint": "biome lint .",
     "check": "biome check --write .",
@@ -34,6 +33,7 @@
     "chalk": "^5.4.1",
     "dotenv": "^16.4.7",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.8.2"
   }
 }

@@ -57,7 +57,7 @@ export default $config({
       },
     });
 
-    new sst.aws.Function("TelegramBotWebhook", {
+    const telegramBotWebhook = new sst.aws.Function("TelegramBotWebhook", {
       url: true,
       handler: "src/lambda/index.handler",
       timeout: "30 seconds",
@@ -71,8 +71,17 @@ export default $config({
       ],
       environment: {
         TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN!,
-        NODE_ENV: process.env.NODE_ENV!,
         APP_PASSWORD: process.env.APP_PASSWORD!,
+        NODE_ENV: process.env.NODE_ENV!,
+        DEBUG: "grammy*",
+      },
+    });
+
+    new sst.x.DevCommand("WebhookSetup", {
+      link: [telegramBotWebhook, usersTable, watchProductsTable],
+      dev: {
+        autostart: true,
+        command: "pnpm sst:init",
       },
     });
   },
