@@ -13,7 +13,7 @@ export const START_COMMAND_KEY = "start";
 // Command metadata for bot menu
 export const startCommandInfo: BotCommand = {
   command: START_COMMAND_KEY,
-  description: `Jelszó beállítása. ${commandName(START_COMMAND_KEY)} «jelszó»`,
+  description: `Jelszó megadása. ${commandName(START_COMMAND_KEY)} «jelszó»`,
 };
 
 export const startCommand = async (ctx: CommandContext<AppContext>) => {
@@ -28,7 +28,7 @@ export const startCommand = async (ctx: CommandContext<AppContext>) => {
 
   if (!password) {
     await ctx.reply(
-      `Tesó, add már meg a jelszót a ${commandName(START_COMMAND_KEY)} «jelszó» paranccsal!`,
+      `Na csumiii ${firstName}!! 👋👋 Én a kifli-radar vagyok! 🍩 Add meg a jelszót a ${commandName(START_COMMAND_KEY)} «jelszó» paranccsal!`,
     );
     return;
   }

@@ -7,6 +7,7 @@ import {
   sleepCommandInfo,
   startCommandInfo,
 } from "./commands";
+import { timezoneCommandInfo } from "./commands/timezone.command";
 import { env } from "./env";
 
 const botToken = env.TELEGRAM_BOT_TOKEN;
@@ -28,6 +29,7 @@ export const setupWebhook = async (url: string) => {
       addCommandInfo,
       removeCommandInfo,
       sleepCommandInfo,
+      timezoneCommandInfo,
     ]),
   ]);
 

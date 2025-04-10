@@ -19,7 +19,7 @@ export const SLEEP_COMMAND_KEY = "sleep";
 export const sleepCommandInfo: BotCommand = {
   command: SLEEP_COMMAND_KEY,
   description: [
-    "🌙 Éjszakai értesítések kezelése",
+    "Éjszakai értesítések kezelése 🌙",
     "",
     `Értesítések mindig: ${commandName(SLEEP_COMMAND_KEY)} off`,
     `Alvás időzítése: ${commandName(SLEEP_COMMAND_KEY)} <óra-tól> <óra-ig>`,

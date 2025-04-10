@@ -86,16 +86,4 @@ bot.on("message:location", (ctx) => {
   }
 });
 
-// Listen for "my_chat_member" updates
-bot.on("my_chat_member", async (ctx) => {
-  const newMember = ctx.update.my_chat_member.new_chat_member;
-
-  if (newMember.status === "member") {
-    await ctx.api.sendMessage(
-      ctx.chat.id,
-      "Na csumiii!! 👋👋  Én a kifli-radar vagyok! 🍩 Add meg a kívánt kedvezmény értékét százalékban, és értesítelekk, ha leesik! 💸",
-    );
-  }
-});
-
 export default bot;
