@@ -5,6 +5,8 @@ import { commandName } from "~/utils/commands";
 import { START_COMMAND_KEY } from "../commands";
 import type { AppContext } from "../context";
 
+const PUBLIC_COMMANDS = [commandName(START_COMMAND_KEY)];
+
 // Middleware to check if the user is authorized
 export const authGuard = () => async (ctx: AppContext, next: NextFunction) => {
   const userId = ctx.from?.id!;
@@ -30,10 +32,10 @@ export const authGuard = () => async (ctx: AppContext, next: NextFunction) => {
     return;
   }
 
+  const command = ctx.message?.text?.toLowerCase();
+
   // Allow /start command for unauthenticated users
-  if (
-    ctx.message?.text?.toLowerCase().startsWith(commandName(START_COMMAND_KEY))
-  ) {
+  if (command && PUBLIC_COMMANDS.some((c) => command.startsWith(c))) {
     await next();
 
     return;
