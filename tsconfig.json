@@ -19,6 +19,6 @@
     },
     "types": ["node"]
   },
-  "include": ["src/**/*", "sst-env.d.ts"],
+  "include": ["src/**/*", "sst-env.d.ts", "scripts/**/*"],
   "exclude": ["node_modules", "dist", "sst.config.js"]
 }
