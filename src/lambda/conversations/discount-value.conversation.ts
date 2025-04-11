@@ -31,7 +31,10 @@ export const askForDiscountValue =
     }
 
     // Read session data inside a conversation.
-    const session = await conversation.external((ctx) => ctx.session);
+    const [session, dbClient] = await conversation.external((ctx) => [
+      ctx.session,
+      ctx.dbClient,
+    ]);
     const userId = ctx.from?.id;
 
     if (!userId || !session.userWatchSelectedProduct) {
@@ -42,7 +45,7 @@ export const askForDiscountValue =
     const productId = session.userWatchSelectedProduct.id;
     const productName = session.userWatchSelectedProduct.name;
 
-    await createWatchProduct(ctx.dbClient, {
+    await createWatchProduct(dbClient, {
       productId,
       productName,
       userId,
