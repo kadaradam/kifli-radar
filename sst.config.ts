@@ -71,7 +71,8 @@ export default $config({
       ],
       environment: {
         TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN!,
-        APP_PASSWORD: process.env.APP_PASSWORD!,
+        APP_PASSWORDS: process.env.APP_PASSWORDS!,
+        AUTH_DISABLED: process.env.AUTH_DISABLED!,
         NODE_ENV: process.env.NODE_ENV!,
         DEBUG: "grammy*",
       },
