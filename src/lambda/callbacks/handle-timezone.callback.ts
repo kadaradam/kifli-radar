@@ -24,7 +24,7 @@ export const handleTimezoneCallback = async (ctx: Ctx) => {
   });
 
   await ctx.reply(
-    `Na, ezt jól megcsináltad! 🎯\nMost már pontosan tudom, hogy ${timezone} van nálad, szóval nem fogok éjjel 3-kor kifliért ébreszteni! 😄`,
+    `Na, ezt jól megcsináltad! 🎯\nMost már pontosan tudom, hogy '${timezone}' van nálad, szóval nem fogok éjjel 3-kor kifliért ébreszteni! 😄`,
   );
 
   ctx.session.isUserRequestingLocation = false;

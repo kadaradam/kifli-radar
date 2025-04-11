@@ -38,24 +38,39 @@ export const startCommand = async (ctx: CommandContext<AppContext>) => {
     return;
   }
 
-  if (password !== env.APP_PASSWORD) {
-    const attempts = ++ctx.session.userAuthAttempts;
+  let authSource: string | undefined;
 
-    await ctx.reply(
-      `Bruh, ez nem jó! Próbálkozások száma: ${attempts}/${config.MAX_LOGIN_ATTEMPTS}`,
+  if (!env.AUTH_DISABLED) {
+    const appPassword = env.APP_PASSWORDS.find(
+      (appPassword) => appPassword.password === password,
     );
 
-    if (attempts >= config.MAX_LOGIN_ATTEMPTS) {
-      await ctx.banChatMember(userId);
+    if (!appPassword) {
+      const attempts = ++ctx.session.userAuthAttempts;
+
+      await ctx.reply(
+        `Bruh, ez nem jó! Próbálkozások száma: ${attempts}/${config.MAX_LOGIN_ATTEMPTS}`,
+      );
+
+      if (attempts >= config.MAX_LOGIN_ATTEMPTS) {
+        await ctx.banChatMember(userId);
+        return;
+      }
+
       return;
     }
 
-    return;
+    authSource = appPassword.name;
   }
 
   ctx.session.userAuthAttempts = 0;
 
-  await createUser(ctx.dbClient, { userId, firstName, lastName });
+  await createUser(ctx.dbClient, {
+    userId,
+    firstName,
+    lastName,
+    authSource,
+  });
 
   ctx.session.userAuthenticatedCache = true;
 
@@ -73,10 +88,12 @@ async function createUser(
     userId,
     firstName,
     lastName,
+    authSource,
   }: {
     userId: number;
     firstName: string;
     lastName: string;
+    authSource?: string;
   },
 ): Promise<void> {
   const now = new Date().toISOString();
@@ -92,6 +109,7 @@ async function createUser(
         sleepFrom: { S: "23:00" },
         sleepTo: { S: "07:00" },
         timezone: { S: "Europe/Budapest" }, // TODO: Later auto detect timezone
+        ...(authSource && { authSource: { S: authSource } }),
         createdAt: { S: now },
         updatedAt: { S: now },
       },

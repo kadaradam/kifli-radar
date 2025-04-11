@@ -6,6 +6,7 @@ export interface User {
   sleepFrom: string;
   sleepTo: string;
   timezone: string;
+  authSource?: string;
   lastNotifiedAt?: Date;
   createdAt: Date;
   updatedAt: Date;

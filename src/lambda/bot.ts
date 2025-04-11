@@ -57,7 +57,7 @@ bot
   .use(conversations())
   .use(createConversation(askForDiscountValue(), ASK_FOR_DISCOUNT_VALUE_KEY));
 
-// Middlewares
+// Guard middlewares
 bot.use(groupChatGuard()).use(authGuard()).use(conversationGuard());
 
 // Callbacks: Handle button clicks
