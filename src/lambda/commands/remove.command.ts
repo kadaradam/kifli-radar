@@ -32,7 +32,7 @@ export const removeCommand = async (ctx: CommandContext<AppContext>) => {
   for (const product of products) {
     const name = product.productName || "Névtelen termék";
     const id = product.productId;
-    keyboard.text(`❌ ${name}`, `remove:${id}`);
+    keyboard.text(`❌ ${name}`, `remove:${id}`).row();
   }
 
   const sentMsg = await ctx.reply(
