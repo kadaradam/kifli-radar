@@ -39,12 +39,12 @@ export class KifliService implements IKifliService {
   }
 
   /**
-   * Fetches last-minute status information for specific products
+   * Fetches last-minute products for specific products
    * @param productIds - Array of product IDs to check for last-minute deals
    * @returns Promise resolving to an array of products with their last-minute status
    */
   // TODO: Handle multiple requests if there are more products
-  public async fetchLastMinuteStatusForProducts(
+  public async fetchLastMinuteProducts(
     productIds: number[],
   ): Promise<KifliLastMinuteProduct[]> {
     const productIdsQs = productIds.join("&products=");

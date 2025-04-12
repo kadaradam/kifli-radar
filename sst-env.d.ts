@@ -5,19 +5,6 @@
 
 declare module "sst" {
   export interface Resource {
-    "TelegramBotWebhook": {
-      "name": string
-      "type": "sst.aws.Function"
-      "url": string
-    }
-    "UsersTable": {
-      "name": string
-      "type": "sst.aws.Dynamo"
-    }
-    "WatchProductsTable": {
-      "name": string
-      "type": "sst.aws.Dynamo"
-    }
   }
 }
 /// <reference path="sst-env.d.ts" />

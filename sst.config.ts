@@ -43,13 +43,70 @@ export default $config({
       },
     });
 
+    const productAnalyticsTable = new sst.aws.Dynamo("ProductAnalyticsTable", {
+      fields: {
+        id: "string",
+        productId: "number",
+        productName: "string",
+        fetchedAt: "string",
+        discountPercentage: "number",
+        stockQuantity: "number",
+      },
+      primaryIndex: {
+        hashKey: "id",
+      },
+      globalIndexes: {
+        // For querying analytics by product and time
+        productTimeIndex: {
+          hashKey: "productId",
+          rangeKey: "fetchedAt",
+          projection: "all",
+        },
+        // For tracking stock changes
+        stockAnalysisIndex: {
+          hashKey: "productId",
+          rangeKey: "stockQuantity",
+          projection: "all",
+        },
+        // For product performance analysis
+        productAnalysisIndex: {
+          hashKey: "productName",
+          rangeKey: "fetchedAt",
+          projection: "all",
+        },
+        // For category-based analysis
+        /*   categoryAnalysisIndex: {
+          hashKey: "categoryId",
+          rangeKey: "fetchedAt",
+          projection: "all",
+        }, */
+        // For analyzing discount effectiveness
+        discountRangeIndex: {
+          hashKey: "discountPercentage",
+          rangeKey: "fetchedAt",
+          projection: "all",
+        },
+        // For tracking product discount history
+        productDiscountHistoryIndex: {
+          hashKey: "productId",
+          rangeKey: "discountPercentage",
+          projection: "all",
+        },
+      },
+      transform: {
+        table: {
+          billingMode: "PAY_PER_REQUEST",
+        },
+      },
+    });
+
     new sst.aws.Cron("FetchProductsCron", {
       schedule: "rate(30 minutes)",
       function: {
         handler: "src/cron.handler",
         timeout: "30 seconds",
         memory: "128 MB",
-        link: [usersTable, watchProductsTable],
+        link: [usersTable, watchProductsTable, productAnalyticsTable],
         environment: {
           TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN!,
           NODE_ENV: process.env.NODE_ENV!,
@@ -63,12 +120,6 @@ export default $config({
       timeout: "30 seconds",
       memory: "128 MB",
       link: [usersTable, watchProductsTable],
-      permissions: [
-        {
-          actions: ["dynamodb:Query", "dynamodb:UpdateItem"],
-          resources: [watchProductsTable.arn],
-        },
-      ],
       environment: {
         TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN!,
         APP_PASSWORDS: process.env.APP_PASSWORDS!,

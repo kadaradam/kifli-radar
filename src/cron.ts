@@ -1,16 +1,23 @@
 import {
+  BatchWriteItemCommand,
+  type BatchWriteItemCommandOutput,
   DynamoDBClient,
   ScanCommand,
   UpdateItemCommand,
   type UpdateItemCommandOutput,
 } from "@aws-sdk/client-dynamodb";
-import { unmarshall } from "@aws-sdk/util-dynamodb";
+import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import type { APIGatewayProxyResult } from "aws-lambda";
 import { Api } from "grammy";
 import { Resource } from "sst";
 import { config } from "~/config";
 import { KifliService } from "~/services/kifli.service";
-import type { KifliLastMinuteProduct, User, WatchProduct } from "./types";
+import type {
+  KifliLastMinuteProduct,
+  ProductAnalytics,
+  User,
+  WatchProduct,
+} from "./types";
 
 const api = new Api(process.env.TELEGRAM_BOT_TOKEN!);
 const dbClient = new DynamoDBClient();
@@ -20,40 +27,28 @@ export const handler = async (): Promise<APIGatewayProxyResult> => {
   console.log("Cron job triggered at", new Date().toISOString());
 
   try {
-    const [notifiableProducts, notifiableUsers] = await Promise.all([
-      getNotifiableProducts(),
-      getNotifiableUsers(),
+    const [watchProducts, users] = await Promise.all([
+      fetchWatchProducts(),
+      fetchUsers(),
     ]);
 
-    console.log(`Found ${notifiableProducts.length} notifiable products`);
-    console.log(`Found ${notifiableUsers.length} notifiable users`);
+    console.log(`Found ${watchProducts.length} products to monitor`);
 
-    // Filter out users that are not notifiable
-    const products = notifiableProducts.filter((product) =>
-      notifiableUsers.some((user) => user.id === product.userId),
-    );
+    const productIds = watchProducts.map((watch) => watch.productId);
+    const availableDiscountedProducts = (
+      await kifliService.fetchLastMinuteProducts(productIds)
+    )
+      .filter((product) => product.prices.saleId)
+      .filter((product) => product.stock.maxAvailableAmount > 0);
 
-    const discountedProducts = await findDiscountedProducts(products);
-
-    console.log(
-      `Found ${Object.keys(discountedProducts).length} discounted products`,
-    );
-
-    let totalDiscountedProducts = 0;
-
-    for (const userId in discountedProducts) {
-      const products = discountedProducts[userId];
-
-      if (!products) {
-        continue;
-      }
-
-      totalDiscountedProducts += products.length;
-
-      await sendDiscountNotification(userId, products);
-    }
-
-    console.log(`Sent total of ${totalDiscountedProducts} notifications`);
+    await Promise.all([
+      processUserNotifications(
+        users,
+        watchProducts,
+        availableDiscountedProducts,
+      ),
+      processProductAnalytics(availableDiscountedProducts),
+    ]);
 
     return {
       statusCode: 200,
@@ -62,8 +57,7 @@ export const handler = async (): Promise<APIGatewayProxyResult> => {
       }),
     };
   } catch (error) {
-    console.error("Error fetching and processing products:", error);
-
+    console.error("Error in cron job execution:", error);
     // TODO: Send message to admin???
 
     return {
@@ -75,66 +69,73 @@ export const handler = async (): Promise<APIGatewayProxyResult> => {
   }
 };
 
-async function findDiscountedProducts(
-  watchList: WatchProduct[],
-): Promise<Record<string, KifliLastMinuteProduct[]>> {
-  const productIds = watchList.map((watch) => watch.productId);
+async function processUserNotifications(
+  users: Pick<
+    User,
+    "id" | "sleepEnabled" | "sleepFrom" | "sleepTo" | "timezone"
+  >[],
+  watchProducts: WatchProduct[],
+  availableDiscountedProducts: KifliLastMinuteProduct[],
+): Promise<void> {
+  const activeUsers = filterActiveUsers(users);
+  // Filter out users that are not notifiable
+  const notifiableProducts = filterNotifiableProducts(watchProducts).filter(
+    (product) => activeUsers.some((user) => user.id === product.userId),
+  );
 
-  const products =
-    await kifliService.fetchLastMinuteStatusForProducts(productIds);
+  console.log(`Found ${activeUsers.length} active users`);
+  console.log(`Found ${notifiableProducts.length} notifiable products`);
 
-  const productsWithDiscount = products
-    .filter((product) => product.prices.saleId)
-    .filter((product) => product.stock.maxAvailableAmount > 0)
-    .filter((product) => {
-      const salePrice = product.prices.salePrice;
-      const originalPrice = product.prices.originalPrice;
-      const watchItem = watchList.find(
-        (watch) => watch.productId === product.productId,
-      );
+  const productsWithRelevantDiscounts = findProductsWithRelevantDiscounts(
+    availableDiscountedProducts,
+    notifiableProducts,
+  );
 
-      if (!salePrice || !watchItem?.minDiscountPercentage) {
-        return false;
-      }
+  console.log(
+    `Found ${Object.keys(productsWithRelevantDiscounts).length} products with relevant discounts`,
+  );
 
-      const discountPercentage = (1 - salePrice / originalPrice) * 100;
-      return discountPercentage >= watchItem.minDiscountPercentage;
-    })
-    .reduce((acc: Record<string, KifliLastMinuteProduct[]>, product) => {
-      const watchItems = watchList.filter(
-        (watch) => watch.productId === product.productId,
-      );
+  let totalNotificationsSent = 0;
 
-      if (!watchItems.length) {
-        return acc;
-      }
+  for (const userId in productsWithRelevantDiscounts) {
+    const products = productsWithRelevantDiscounts[userId];
 
-      for (const watchItem of watchItems) {
-        const userId = watchItem.userId;
+    if (!products?.length) {
+      continue;
+    }
 
-        if (!acc[userId]) {
-          acc[userId] = [];
-        }
+    totalNotificationsSent += products.length;
+    await sendUserNotification(userId, products);
+  }
 
-        acc[userId].push(product);
-      }
-
-      return acc;
-    }, {});
-
-  return productsWithDiscount;
+  console.log(`Sent total of ${totalNotificationsSent} notifications`);
 }
 
-async function sendDiscountNotification(
+async function sendUserNotification(
   userId: string,
   products: KifliLastMinuteProduct[],
 ): Promise<void> {
   if (products.length === 0) return;
 
+  const messageText = buildNotificationMessage(products);
+  const now = new Date().toISOString();
+  const productIds = products.map((product) => product.productId);
+
+  // Send the message first
+  await api.sendMessage(userId, messageText, {
+    parse_mode: "MarkdownV2",
+  });
+
+  await Promise.all([
+    updateUserLastNotifiedAt(userId, now),
+    updateProductsLastNotifiedAt(userId, productIds, now),
+  ]);
+}
+
+function buildNotificationMessage(products: KifliLastMinuteProduct[]): string {
   let messageText = "🔥 *Báttya, most őrület van\\!* 🤩\n\n";
   messageText += "Nézd meg ezeket a csodás akciókat:\n\n";
 
-  // Add each product with its details
   for (const product of products) {
     const discountAmount =
       product.prices.originalPrice - product.prices.salePrice!;
@@ -156,37 +157,90 @@ async function sendDiscountNotification(
   }
 
   messageText += "🎉 *Ne hagyd, hogy lecsússz róluk, kapd el, amíg még van\\!*";
-
-  // Send the message first
-  await api.sendMessage(userId, messageText, {
-    parse_mode: "MarkdownV2",
-  });
-
-  const now = new Date().toISOString();
-  const productIds = products.map((product) => product.productId);
-
-  await Promise.all([
-    updateUserLastNotifiedAt(userId, now),
-    updateProductsLastNotifiedAt(userId, productIds, now),
-  ]);
+  return messageText;
 }
 
-// TODO: Create user and product services
+function findProductsWithRelevantDiscounts(
+  availableProducts: KifliLastMinuteProduct[],
+  watchProducts: WatchProduct[],
+): Record<string, KifliLastMinuteProduct[]> {
+  return availableProducts
+    .filter((product) => {
+      const salePrice = product.prices.salePrice;
+      const originalPrice = product.prices.originalPrice;
+      const watchItem = watchProducts.find(
+        (watch) => watch.productId === product.productId,
+      );
 
-async function getNotifiableProducts(): Promise<WatchProduct[]> {
-  const result = await dbClient.send(
-    // TODO: add index to deletedAt
-    new ScanCommand({
-      TableName: Resource.WatchProductsTable.name,
-      FilterExpression: "attribute_not_exists(deletedAt)",
-      ProjectionExpression:
-        "productId, productName, userId, minDiscountPercentage, lastNotifiedAt",
-    }),
-  );
+      if (!salePrice || !watchItem?.minDiscountPercentage) {
+        return false;
+      }
 
-  const products =
-    result.Items?.map((item) => unmarshall(item) as WatchProduct) ?? [];
+      const discountPercentage = (1 - salePrice / originalPrice) * 100;
+      return discountPercentage >= watchItem.minDiscountPercentage;
+    })
+    .reduce((acc: Record<string, KifliLastMinuteProduct[]>, product) => {
+      const watchItems = watchProducts.filter(
+        (watch) => watch.productId === product.productId,
+      );
 
+      if (!watchItems.length) {
+        return acc;
+      }
+
+      for (const watchItem of watchItems) {
+        const userId = watchItem.userId;
+
+        if (!acc[userId]) {
+          acc[userId] = [];
+        }
+
+        acc[userId].push(product);
+      }
+
+      return acc;
+    }, {});
+}
+
+async function processProductAnalytics(
+  products: KifliLastMinuteProduct[],
+): Promise<BatchWriteItemCommandOutput> {
+  const now = new Date().toISOString();
+
+  const analyticsData = products.reduce((acc: ProductAnalytics[], product) => {
+    const salePrice = product.prices.salePrice;
+    const originalPrice = product.prices.originalPrice;
+
+    if (!salePrice) {
+      return acc;
+    }
+
+    const discountPercentage = formatNumber(
+      (1 - salePrice / originalPrice) * 100,
+    );
+
+    if (discountPercentage < config.MIN_DISCOUNT_PERCENTAGE_FOR_ANALYTICS) {
+      return acc;
+    }
+
+    acc.push({
+      id: crypto.randomUUID(),
+      productId: product.productId,
+      productName: product.name,
+      originalPrice,
+      salePrice,
+      discountPercentage: discountPercentage,
+      stockQuantity: product.stock.maxAvailableAmount,
+      fetchedAt: now,
+    });
+
+    return acc;
+  }, []);
+
+  return insertAnalytics(analyticsData);
+}
+
+function filterNotifiableProducts(products: WatchProduct[]): WatchProduct[] {
   return products.filter((product) => {
     // Filter out products that were notified in the last 24 hours
 
@@ -194,28 +248,22 @@ async function getNotifiableProducts(): Promise<WatchProduct[]> {
       return true;
     }
 
+    const lastNotifiedDate = new Date(product.lastNotifiedAt);
+    const now = new Date();
+
     const diffHours =
-      (Date.now() - new Date(product.lastNotifiedAt).getTime()) /
-      (1000 * 60 * 60);
+      (now.getTime() - lastNotifiedDate.getTime()) / (1000 * 60 * 60);
+
     return diffHours >= config.NEW_NOTIFICATION_THRESHOLD_IN_HOURS;
   });
 }
 
-async function getNotifiableUsers(): Promise<
-  Pick<User, "id" | "sleepEnabled" | "sleepFrom" | "sleepTo" | "timezone">[]
-> {
-  const result = await dbClient.send(
-    new ScanCommand({
-      TableName: Resource.UsersTable.name,
-      ProjectionExpression: "id, sleepEnabled, sleepFrom, sleepTo, #tz",
-      ExpressionAttributeNames: {
-        "#tz": "timezone",
-      },
-    }),
-  );
-
-  const users = result.Items?.map((item) => unmarshall(item) as User) ?? [];
-
+function filterActiveUsers(
+  users: Pick<
+    User,
+    "id" | "sleepEnabled" | "sleepFrom" | "sleepTo" | "timezone"
+  >[],
+): Pick<User, "id" | "sleepEnabled" | "sleepFrom" | "sleepTo" | "timezone">[] {
   return users.filter((user) => {
     // Auto include users that are not sleeping
     if (!user.sleepEnabled || !user.timezone) {
@@ -223,7 +271,6 @@ async function getNotifiableUsers(): Promise<
     }
 
     const now = getTimeInTimeZone(user.timezone);
-
     const nowHours = now.getHours();
     const nowMinutes = now.getMinutes();
 
@@ -242,13 +289,49 @@ async function getNotifiableUsers(): Promise<
     }
 
     // Include users that are in sleep mode and the current time is not between the sleep times
-    return (
-      nowHours < sleepFromHours ||
-      (nowHours === sleepFromHours && nowMinutes < sleepFromMinutes) ||
-      nowHours > sleepToHours ||
-      (nowHours === sleepToHours && nowMinutes > sleepToMinutes)
-    );
+    // Convert all times to minutes for easier comparison
+    const currentTime = nowHours * 60 + nowMinutes;
+    const sleepFromTime = sleepFromHours * 60 + sleepFromMinutes;
+    const sleepToTime = sleepToHours * 60 + sleepToMinutes;
+
+    if (sleepFromTime > sleepToTime) {
+      return currentTime < sleepFromTime && currentTime >= sleepToTime;
+    }
+
+    return currentTime < sleepFromTime || currentTime >= sleepToTime;
   });
+}
+
+// TODO: Create user and product services
+
+async function fetchUsers(): Promise<
+  Pick<User, "id" | "sleepEnabled" | "sleepFrom" | "sleepTo" | "timezone">[]
+> {
+  const result = await dbClient.send(
+    new ScanCommand({
+      TableName: Resource.UsersTable.name,
+      ProjectionExpression: "id, sleepEnabled, sleepFrom, sleepTo, #tz",
+      ExpressionAttributeNames: {
+        "#tz": "timezone",
+      },
+    }),
+  );
+
+  return result.Items?.map((item) => unmarshall(item) as User) ?? [];
+}
+
+async function fetchWatchProducts(): Promise<WatchProduct[]> {
+  const result = await dbClient.send(
+    // TODO: add index to deletedAt
+    new ScanCommand({
+      TableName: Resource.WatchProductsTable.name,
+      FilterExpression: "attribute_not_exists(deletedAt)",
+      ProjectionExpression:
+        "productId, productName, userId, minDiscountPercentage, lastNotifiedAt",
+    }),
+  );
+
+  return result.Items?.map((item) => unmarshall(item) as WatchProduct) ?? [];
 }
 
 async function updateUserLastNotifiedAt(
@@ -287,18 +370,29 @@ async function updateProductsLastNotifiedAt(
   );
 }
 
-const escapeMarkdown = (text: string | number) => {
+async function insertAnalytics(
+  analytics: ProductAnalytics[],
+): Promise<BatchWriteItemCommandOutput> {
+  return dbClient.send(
+    new BatchWriteItemCommand({
+      RequestItems: {
+        [Resource.ProductAnalyticsTable.name]: analytics.map((item) => ({
+          PutRequest: { Item: marshall(item) },
+        })),
+      },
+    }),
+  );
+}
+
+const escapeMarkdown = (text: string | number): string => {
   return text.toString().replace(/[_*[\]()~`>#+=|{}.!-]/g, "\\$&");
 };
 
-const formatNumber = (num: number) => {
+const formatNumber = (num: number): number => {
   return Number.isInteger(num) ? num : Number.parseFloat(num.toFixed(2));
 };
 
-const getTimeInTimeZone = (timezone: string) => {
+const getTimeInTimeZone = (timezone: string): Date => {
   const now = new Date();
-  const timeInTimeZone = new Date(
-    now.toLocaleString("en-US", { timeZone: timezone }),
-  );
-  return timeInTimeZone;
+  return new Date(now.toLocaleString("en-US", { timeZone: timezone }));
 };
