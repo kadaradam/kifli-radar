@@ -68,7 +68,7 @@ async function checkDBUserAuthenticated(
     }),
   );
 
-  const isBanned = !!user.Item?.isBanned;
+  const isBanned = !!user.Item?.isBanned?.BOOL;
   const isAuthenticated = isBanned ? false : !!user.Item;
 
   return [isAuthenticated, isBanned];
