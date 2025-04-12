@@ -19,7 +19,7 @@ export const authGuard = () => async (ctx: AppContext, next: NextFunction) => {
     return;
   }
 
-  const isUserDBAuthenticated = await checkDBUserAuthenticated(
+  const [isUserDBAuthenticated, isUserBanned] = await checkDBUserAuthenticated(
     ctx.dbClient,
     userId,
   );
@@ -29,6 +29,11 @@ export const authGuard = () => async (ctx: AppContext, next: NextFunction) => {
 
     await next();
 
+    return;
+  }
+
+  if (isUserBanned) {
+    await ctx.reply("Bocsi, de ez a fiók le lett tiltva.");
     return;
   }
 
@@ -54,16 +59,19 @@ export const authGuard = () => async (ctx: AppContext, next: NextFunction) => {
 async function checkDBUserAuthenticated(
   dbClient: DynamoDBClient,
   userId: number,
-): Promise<boolean> {
+): Promise<[boolean, boolean]> {
   const user = await dbClient.send(
     new GetItemCommand({
       TableName: Resource.UsersTable.name,
       Key: { id: { N: userId.toString() } },
-      ProjectionExpression: "id",
+      ProjectionExpression: "id, isBanned",
     }),
   );
 
-  return !!user.Item;
+  const isBanned = !!user.Item?.isBanned;
+  const isAuthenticated = isBanned ? false : !!user.Item;
+
+  return [isAuthenticated, isBanned];
 }
 
 function checkCacheUserAuthenticated(ctx: AppContext): boolean {

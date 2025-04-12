@@ -53,7 +53,14 @@ export const startCommand = async (ctx: CommandContext<AppContext>) => {
       );
 
       if (attempts >= config.MAX_LOGIN_ATTEMPTS) {
-        await ctx.banChatMember(userId);
+        // await ctx.banChatMember(userId);
+
+        await createUser(ctx.dbClient, {
+          userId,
+          firstName,
+          lastName,
+          isBanned: true,
+        });
         return;
       }
 
@@ -89,11 +96,13 @@ async function createUser(
     firstName,
     lastName,
     authSource,
+    isBanned,
   }: {
     userId: number;
     firstName: string;
     lastName: string;
     authSource?: string;
+    isBanned?: boolean;
   },
 ): Promise<void> {
   const now = new Date().toISOString();
@@ -110,6 +119,7 @@ async function createUser(
         sleepTo: { S: "07:00" },
         timezone: { S: "Europe/Budapest" }, // TODO: Later auto detect timezone
         ...(authSource && { authSource: { S: authSource } }),
+        ...(isBanned && { isBanned: { BOOL: true } }),
         createdAt: { S: now },
         updatedAt: { S: now },
       },

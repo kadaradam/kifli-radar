@@ -7,6 +7,7 @@ export interface User {
   sleepTo: string;
   timezone: string;
   authSource?: string;
+  isBanned?: boolean;
   lastNotifiedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
