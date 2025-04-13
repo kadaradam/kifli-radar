@@ -133,7 +133,7 @@ export default $config({
       link: [telegramBotWebhook, usersTable, watchProductsTable],
       dev: {
         autostart: true,
-        command: "pnpm sst:init",
+        command: `pnpm setup-bot --url ${telegramBotWebhook.url}`,
       },
     });
   },
