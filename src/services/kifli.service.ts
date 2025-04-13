@@ -4,8 +4,9 @@ const KIFLI_API_URL = "https://kifli.hu/api/v1/";
 
 export interface IKifliService {
   getProductIdFromUrl(url: string): string | null;
+  buildLastMinuteProductUrl(productId: number): string;
   getProduct(productId: string): Promise<KifliProduct>;
-  fetchLastMinuteStatusForProducts(
+  fetchLastMinuteProducts(
     productIds: number[],
   ): Promise<KifliLastMinuteProduct[]>;
 }
@@ -25,6 +26,15 @@ export class KifliService implements IKifliService {
   public getProductIdFromUrl(url: string): string | null {
     const match = url.match(/kifli\.hu\/(\d+)/);
     return match?.[1] ?? null;
+  }
+
+  /**
+   * Builds a product URL with the last-minute parameter
+   * @param productId - The ID of the product
+   * @returns The product URL with the last-minute parameter
+   */
+  public buildLastMinuteProductUrl(productId: number): string {
+    return `https://www.kifli.hu/${productId}?lm=1`;
   }
 
   /**

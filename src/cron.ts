@@ -142,6 +142,9 @@ function buildNotificationMessage(products: KifliLastMinuteProduct[]): string {
     const discountPercentage = Math.round(
       (1 - product.prices.salePrice! / product.prices.originalPrice) * 100,
     );
+    const lastMinuteProductUrl = kifliService.buildLastMinuteProductUrl(
+      product.productId,
+    );
 
     messageText += `*${escapeMarkdown(product.name)}*\n`;
     messageText += `💰 *Ár*: ~${escapeMarkdown(
@@ -153,7 +156,7 @@ function buildNotificationMessage(products: KifliLastMinuteProduct[]): string {
     messageText += `📦 *Raktáron*: ${escapeMarkdown(
       product.stock.maxAvailableAmount,
     )} db\n`;
-    messageText += `🔗 [Termék megtekintése](https://www.kifli.hu/${product.productId})\n\n`;
+    messageText += `🔗 [Termék megtekintése](${lastMinuteProductUrl})\n\n`;
   }
 
   messageText += "🎉 *Ne hagyd, hogy lecsússz róluk, kapd el, amíg még van\\!*";
