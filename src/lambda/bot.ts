@@ -14,15 +14,13 @@ import {
   REMOVE_COMMAND_KEY,
   SLEEP_COMMAND_KEY,
   START_COMMAND_KEY,
+  TIMEZONE_COMMAND_KEY,
   addCommand,
   removeCommand,
   sleepCommand,
   startCommand,
-} from "./commands";
-import {
-  TIMEZONE_COMMAND_KEY,
   timezoneCommand,
-} from "./commands/timezone.command";
+} from "./commands";
 import type { AppContext } from "./context";
 import {
   ASK_FOR_DISCOUNT_VALUE_KEY,

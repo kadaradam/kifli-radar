@@ -18,3 +18,8 @@ export {
   startCommand,
   startCommandInfo,
 } from "./start.command";
+export {
+  TIMEZONE_COMMAND_KEY,
+  timezoneCommand,
+  timezoneCommandInfo,
+} from "./timezone.command";
