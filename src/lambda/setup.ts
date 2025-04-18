@@ -21,7 +21,7 @@ export const setupWebhook = async (url: string): Promise<boolean> => {
   }
 
   await Promise.all([
-    /*  api.setWebhook(url), */
+    api.setWebhook(url),
     api.setMyCommands([
       startCommandInfo,
       addCommandInfo,
