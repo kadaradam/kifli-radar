@@ -23,7 +23,7 @@ export class KifliService implements IKifliService {
    * @example
    * getProductIdFromUrl("https://kifli.hu/123456") // returns "123456"
    */
-  public getProductIdFromUrl(url: string): string | null {
+  public getProductIdFromUrl(url: string) {
     const match = url.match(/kifli\.hu\/(\d+)/);
     return match?.[1] ?? null;
   }
@@ -33,7 +33,7 @@ export class KifliService implements IKifliService {
    * @param productId - The ID of the product
    * @returns The product URL with the last-minute parameter
    */
-  public buildLastMinuteProductUrl(productId: number): string {
+  public buildLastMinuteProductUrl(productId: number) {
     return `https://www.kifli.hu/${productId}?lm=1`;
   }
 
@@ -42,7 +42,7 @@ export class KifliService implements IKifliService {
    * @param productId - The ID of the product to fetch
    * @returns Promise resolving to the product details
    */
-  public async getProduct(productId: string): Promise<KifliProduct> {
+  public async getProduct(productId: string) {
     const request = await fetch(`${KIFLI_API_URL}/products/${productId}`);
     const data = (await request.json()) as KifliProduct;
     return data;
@@ -54,9 +54,7 @@ export class KifliService implements IKifliService {
    * @returns Promise resolving to an array of products with their last-minute status
    */
   // TODO: Handle multiple requests if there are more products
-  public async fetchLastMinuteProducts(
-    productIds: number[],
-  ): Promise<KifliLastMinuteProduct[]> {
+  public async fetchLastMinuteProducts(productIds: number[]) {
     const productIdsQs = productIds.join("&products=");
 
     const request = await fetch(
