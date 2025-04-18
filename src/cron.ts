@@ -23,6 +23,8 @@ const api = new Api(process.env.TELEGRAM_BOT_TOKEN!);
 const dbClient = new DynamoDBClient();
 const kifliService = new KifliService();
 
+const MAX_BATCH_SIZE = 25;
+
 export const handler = async (): Promise<APIGatewayProxyResult> => {
   console.log("Cron job triggered at", new Date().toISOString());
 
@@ -373,18 +375,36 @@ async function updateProductsLastNotifiedAt(
   );
 }
 
-async function insertAnalytics(
-  analytics: ProductAnalytics[],
-): Promise<BatchWriteItemCommandOutput> {
-  return dbClient.send(
-    new BatchWriteItemCommand({
-      RequestItems: {
-        [Resource.ProductAnalyticsTable.name]: analytics.map((item) => ({
-          PutRequest: { Item: marshall(item) },
-        })),
-      },
-    }),
+async function insertAnalytics(analytics: ProductAnalytics[]): Promise<void> {
+  if (!analytics.length) {
+    return;
+  }
+
+  // Handle item batching
+  const chunks = analytics.reduce((acc: ProductAnalytics[][], item, index) => {
+    const chunkIndex = Math.floor(index / MAX_BATCH_SIZE);
+
+    if (!acc[chunkIndex]) {
+      acc[chunkIndex] = [];
+    }
+
+    acc[chunkIndex].push(item);
+    return acc;
+  }, []);
+
+  const promises = chunks.map((chunk) =>
+    dbClient.send(
+      new BatchWriteItemCommand({
+        RequestItems: {
+          [Resource.ProductAnalyticsTable.name]: chunk.map((item) => ({
+            PutRequest: { Item: marshall(item) },
+          })),
+        },
+      }),
+    ),
   );
+
+  await Promise.all(promises);
 }
 
 const escapeMarkdown = (text: string | number): string => {
