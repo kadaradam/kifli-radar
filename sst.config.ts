@@ -125,7 +125,13 @@ export default $config({
         APP_PASSWORDS: process.env.APP_PASSWORDS!,
         AUTH_DISABLED: process.env.AUTH_DISABLED!,
         NODE_ENV: process.env.NODE_ENV!,
-        DEBUG: "grammy*",
+        DEBUG: process.env.DEBUG!,
+        CACHE_DRIVER: process.env.CACHE_DRIVER!,
+        REDIS_HOST: process.env.REDIS_HOST!,
+        REDIS_PORT: process.env.REDIS_PORT!,
+        REDIS_PASSWORD: process.env.REDIS_PASSWORD!,
+        REDIS_USERNAME: process.env.REDIS_USERNAME!,
+        REDIS_DB: process.env.REDIS_DB!,
       },
     });
 
