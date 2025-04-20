@@ -6,9 +6,9 @@ export interface ICacheService {
     fetchFn: () => Promise<T | null>,
     options?: CacheOptions,
   ): Promise<T | null>;
-  get<T>(key: string): T | null;
-  set<T>(key: string, data: T, options?: CacheOptions): void;
-  delete(key: string): void;
-  clear(): void;
-  getCacheKeys(): string[];
+  get<T>(key: string): Promise<T | null>;
+  set<T>(key: string, data: T, options?: CacheOptions): Promise<void>;
+  delete(key: string): Promise<void>;
+  clear(): Promise<void>;
+  getCacheKeys(): Promise<string[]>;
 }

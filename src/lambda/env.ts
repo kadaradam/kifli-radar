@@ -19,6 +19,25 @@ const envSchema = z.object({
       ),
     )
     .describe("App passwords"),
+  CACHE_DRIVER: z
+    .enum(["memory", "redis"])
+    .default("memory")
+    .describe("Cache driver"),
+  REDIS_HOST: z.string().default("localhost").optional().describe("Redis host"),
+  REDIS_PORT: z
+    .string()
+    .default("6379")
+    .transform(Number)
+    .optional()
+    .describe("Redis port"),
+  REDIS_PASSWORD: z.string().optional().describe("Redis password"),
+  REDIS_USERNAME: z.string().optional().describe("Redis username"),
+  REDIS_DB: z
+    .string()
+    .default("0")
+    .transform(Number)
+    .optional()
+    .describe("Redis database"),
   ENV: z
     .enum(["development", "staging", "production"])
     .default("development")

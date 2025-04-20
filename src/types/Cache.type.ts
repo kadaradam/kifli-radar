@@ -7,3 +7,5 @@ export interface CacheItem<T> {
   timestamp: number;
   ttl?: number;
 }
+
+export type CacheMemory = Map<string, CacheItem<unknown>>;

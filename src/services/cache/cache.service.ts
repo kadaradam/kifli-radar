@@ -28,7 +28,7 @@ export class CacheService implements ICacheService {
     fetchFn: () => Promise<T | null>,
     options = {},
   ) {
-    const cached = this.get<T>(key);
+    const cached = await this.get<T>(key);
 
     if (cached) {
       return cached;
@@ -41,25 +41,25 @@ export class CacheService implements ICacheService {
     return data;
   }
 
-  public get<T>(key: string) {
+  public async get<T>(key: string) {
     return this.adapter.get<T>(key);
   }
 
-  public set<T>(key: string, data: T, options: CacheOptions = {}) {
-    this.adapter.set(key, data, {
+  public async set<T>(key: string, data: T, options: CacheOptions = {}) {
+    return this.adapter.set(key, data, {
       ttl: options.ttl || this.defaultTTL,
     });
   }
 
-  public delete(key: string) {
-    this.adapter.delete(key);
+  public async delete(key: string) {
+    return this.adapter.delete(key);
   }
 
-  public clear() {
-    this.adapter.clear();
+  public async clear() {
+    return this.adapter.clear();
   }
 
-  public getCacheKeys() {
+  public async getCacheKeys() {
     return this.adapter.getCacheKeys();
   }
 }

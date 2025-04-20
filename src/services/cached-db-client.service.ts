@@ -71,7 +71,7 @@ export class CachedDBClient implements ICachedDBClient {
     const table = params.TableName;
 
     if (table) {
-      this.invalidateTable(table, options?.cacheKey);
+      await this.invalidateTable(table, options?.cacheKey);
     }
 
     return this.dbClient.send(new PutItemCommand(params));
@@ -84,16 +84,16 @@ export class CachedDBClient implements ICachedDBClient {
     const table = params.TableName;
 
     if (table) {
-      this.invalidateTable(table, options?.cacheKey);
+      await this.invalidateTable(table, options?.cacheKey);
     }
 
     return this.dbClient.send(new UpdateItemCommand(params));
   }
 
-  public invalidateTable(tableName: string, key?: string) {
+  public async invalidateTable(tableName: string, key?: string) {
     const pattern = key ? `db:${tableName}:${key}:` : `db:${tableName}:`;
 
-    for (const key of this.cacheService.getCacheKeys()) {
+    for (const key of await this.cacheService.getCacheKeys()) {
       if (key.startsWith(pattern)) {
         this.cacheService.delete(key);
       }

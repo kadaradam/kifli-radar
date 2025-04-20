@@ -1,9 +1,9 @@
-import type { CacheAdapter, CacheItem, CacheOptions } from "~/types";
+import type { CacheAdapter, CacheMemory, CacheOptions } from "~/types";
 
 export class MemoryCacheAdapter implements CacheAdapter {
-  private cache: Map<string, CacheItem<unknown>>;
+  private cache: CacheMemory;
 
-  constructor(_cache?: Map<string, CacheItem<unknown>>) {
+  constructor(_cache?: CacheMemory) {
     this.cache = _cache || new Map();
   }
 

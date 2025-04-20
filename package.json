@@ -22,6 +22,7 @@
     "@grammyjs/conversations": "github:grammyjs/conversations",
     "@grammyjs/ratelimiter": "^1.2.1",
     "grammy": "^1.35.1",
+    "ioredis": "^5.6.1",
     "sst": "3.11.11",
     "tz-lookup": "^6.1.25",
     "zod": "^3.24.2"

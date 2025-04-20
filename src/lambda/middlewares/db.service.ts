@@ -1,7 +1,10 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import type { NextFunction } from "grammy";
-import { CachedDBClient, MemoryCacheAdapter } from "~/services";
+import { CachedDBClient, MemoryCacheAdapter, RedisClient } from "~/services";
+import { RedisCacheAdapter } from "~/services/cache/adapters/redis-cache.adapter";
+import type { CacheAdapter, CacheMemory } from "~/types";
 import type { AppContext } from "../context";
+import { env } from "../env";
 
 const dbClient = new DynamoDBClient();
 
@@ -12,9 +15,18 @@ export const db = () => async (ctx: AppContext, next: NextFunction) => {
       throw new Error("'cache' field is not set in Grammy session");
     }
 
-    const cacheAdapter = new MemoryCacheAdapter(ctx.session.cache);
+    const cacheAdapter = getCacheAdapter(ctx.session.cache);
     ctx.db = new CachedDBClient(dbClient, cacheAdapter);
   }
 
   await next();
+};
+
+const getCacheAdapter = (cacheMemory: CacheMemory): CacheAdapter => {
+  if (env.CACHE_DRIVER === "redis") {
+    const redis = RedisClient.getInstance();
+    return new RedisCacheAdapter(redis);
+  }
+
+  return new MemoryCacheAdapter(cacheMemory);
 };

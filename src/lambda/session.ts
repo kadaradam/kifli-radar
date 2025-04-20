@@ -1,4 +1,4 @@
-import type { CacheItem } from "~/types";
+import type { CacheMemory } from "~/types";
 import type { AppContext } from "./context";
 
 type UserWatchSelectedProduct = {
@@ -10,7 +10,7 @@ export interface SessionData {
   userAuthAttempts: number;
   userWatchSelectedProduct: UserWatchSelectedProduct | undefined;
   isUserRequestingLocation: boolean;
-  cache: Map<string, CacheItem<unknown>>;
+  cache: CacheMemory;
 }
 
 export const initialSessionData = (): SessionData => {
