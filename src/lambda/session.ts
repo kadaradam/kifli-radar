@@ -1,15 +1,16 @@
+import type { CacheItem } from "~/types";
 import type { AppContext } from "./context";
 
 type UserWatchSelectedProduct = {
   id: number;
   name: string;
 };
-
 export interface SessionData {
   userAuthenticatedCache: boolean | undefined;
   userAuthAttempts: number;
   userWatchSelectedProduct: UserWatchSelectedProduct | undefined;
   isUserRequestingLocation: boolean;
+  cache: Map<string, CacheItem<unknown>>;
 }
 
 export const initialSessionData = (): SessionData => {
@@ -18,6 +19,7 @@ export const initialSessionData = (): SessionData => {
     userAuthAttempts: 0,
     userWatchSelectedProduct: undefined,
     isUserRequestingLocation: false,
+    cache: new Map(),
   };
 };
 

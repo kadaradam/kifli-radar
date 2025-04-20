@@ -1,14 +1,8 @@
-import {
-  type DynamoDBClient,
-  GetItemCommand,
-  UpdateItemCommand,
-  type UpdateItemCommandOutput,
-} from "@aws-sdk/client-dynamodb";
-import { unmarshall } from "@aws-sdk/util-dynamodb";
+import type { UpdateItemCommandOutput } from "@aws-sdk/client-dynamodb";
 import type { CommandContext } from "grammy";
 import type { BotCommand } from "grammy/types";
 import { Resource } from "sst";
-import type { User } from "~/types";
+import type { ICachedDBClient, User } from "~/types";
 import { commandName } from "~/utils/commands";
 import type { AppContext } from "../context";
 
@@ -33,6 +27,7 @@ export const sleepCommandInfo: BotCommand = {
 export const sleepCommand = async (ctx: CommandContext<AppContext>) => {
   const userId = ctx.from?.id;
   const params = ctx.match;
+  const { db } = ctx;
 
   if (!userId || !params) {
     await ctx.reply(sleepCommandInfo.description);
@@ -40,7 +35,7 @@ export const sleepCommand = async (ctx: CommandContext<AppContext>) => {
   }
 
   if (params === "off") {
-    await turnOffSleepMode(ctx.dbClient, userId);
+    await turnOffSleepMode(db, userId);
     await ctx.reply(
       "🔔 Értesítések mindig bekapcsolva! Most már akkor is értesítünk, ha épp szunyálsz 😈",
     );
@@ -48,7 +43,12 @@ export const sleepCommand = async (ctx: CommandContext<AppContext>) => {
   }
 
   if (params === "info") {
-    const sleepMode = await getSleepMode(ctx.dbClient, userId);
+    const sleepMode = await getSleepMode(db, userId);
+
+    // TypeScript safety, should never happen
+    if (!sleepMode) {
+      return;
+    }
 
     if (!sleepMode.sleepEnabled) {
       await ctx.reply("🔔 Jelenlegi beállítás: Értesítések mindig");
@@ -79,7 +79,7 @@ export const sleepCommand = async (ctx: CommandContext<AppContext>) => {
     return;
   }
 
-  await turnOnSleepMode(ctx.dbClient, {
+  await turnOnSleepMode(db, {
     userId,
     from: fromTime,
     to: toTime,
@@ -105,29 +105,30 @@ const normalizeTime = (time: string): string | null => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
+type SleepMode = Pick<User, "sleepEnabled" | "sleepFrom" | "sleepTo">;
+
 const getSleepMode = async (
-  dbClient: DynamoDBClient,
+  db: ICachedDBClient,
   userId: number,
-): Promise<Pick<User, "sleepEnabled" | "sleepFrom" | "sleepTo">> => {
-  const result = await dbClient.send(
-    new GetItemCommand({
+): Promise<SleepMode | null> => {
+  return db.getItem<SleepMode>(
+    {
       TableName: Resource.UsersTable.name,
       Key: {
         id: { N: userId.toString() },
       },
       ProjectionExpression: "sleepEnabled, sleepFrom, sleepTo",
-    }),
+    },
+    { cacheKey: userId.toString() },
   );
-
-  return unmarshall(result.Item!) as User;
 };
 
 const turnOnSleepMode = async (
-  dbClient: DynamoDBClient,
+  db: ICachedDBClient,
   { userId, from, to }: { userId: number; from: string; to: string },
 ): Promise<UpdateItemCommandOutput> => {
-  return dbClient.send(
-    new UpdateItemCommand({
+  return db.updateItem(
+    {
       TableName: Resource.UsersTable.name,
       Key: {
         id: { N: userId.toString() },
@@ -139,16 +140,17 @@ const turnOnSleepMode = async (
         ":sleepFrom": { S: from },
         ":sleepTo": { S: to },
       },
-    }),
+    },
+    { cacheKey: userId.toString() },
   );
 };
 
 const turnOffSleepMode = async (
-  dbClient: DynamoDBClient,
+  db: ICachedDBClient,
   userId: number,
 ): Promise<UpdateItemCommandOutput> => {
-  return dbClient.send(
-    new UpdateItemCommand({
+  return db.updateItem(
+    {
       TableName: Resource.UsersTable.name,
       Key: {
         id: { N: userId.toString() },
@@ -157,6 +159,7 @@ const turnOffSleepMode = async (
       ExpressionAttributeValues: {
         ":sleepEnabled": { BOOL: false },
       },
-    }),
+    },
+    { cacheKey: userId.toString() },
   );
 };

@@ -1,6 +1,6 @@
-import { type DynamoDBClient, GetItemCommand } from "@aws-sdk/client-dynamodb";
 import type { NextFunction } from "grammy";
 import { Resource } from "sst";
+import type { ICachedDBClient, User } from "~/types";
 import { commandName } from "~/utils/commands";
 import { START_COMMAND_KEY } from "../commands";
 import type { AppContext } from "../context";
@@ -10,6 +10,7 @@ const PUBLIC_COMMANDS = [commandName(START_COMMAND_KEY)];
 // Middleware to check if the user is authorized
 export const authGuard = () => async (ctx: AppContext, next: NextFunction) => {
   const userId = ctx.from?.id!;
+  const { db } = ctx;
 
   const isCacheUserAuthenticated = checkCacheUserAuthenticated(ctx);
 
@@ -20,7 +21,7 @@ export const authGuard = () => async (ctx: AppContext, next: NextFunction) => {
   }
 
   const [isUserDBAuthenticated, isUserBanned] = await checkDBUserAuthenticated(
-    ctx.dbClient,
+    db,
     userId,
   );
 
@@ -57,19 +58,20 @@ export const authGuard = () => async (ctx: AppContext, next: NextFunction) => {
 };
 
 async function checkDBUserAuthenticated(
-  dbClient: DynamoDBClient,
+  db: ICachedDBClient,
   userId: number,
 ): Promise<[boolean, boolean]> {
-  const user = await dbClient.send(
-    new GetItemCommand({
+  const user = await db.getItem<Pick<User, "id" | "isBanned">>(
+    {
       TableName: Resource.UsersTable.name,
       Key: { id: { N: userId.toString() } },
       ProjectionExpression: "id, isBanned",
-    }),
+    },
+    { cacheKey: userId.toString() },
   );
 
-  const isBanned = !!user.Item?.isBanned?.BOOL;
-  const isAuthenticated = isBanned ? false : !!user.Item;
+  const isBanned = !!user?.isBanned;
+  const isAuthenticated = isBanned ? false : !!user;
 
   return [isAuthenticated, isBanned];
 }

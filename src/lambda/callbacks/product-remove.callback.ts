@@ -1,9 +1,6 @@
-import {
-  type DynamoDBClient,
-  UpdateItemCommand,
-} from "@aws-sdk/client-dynamodb";
 import type { CallbackQueryContext } from "grammy";
 import { Resource } from "sst";
+import type { ICachedDBClient } from "~/types";
 import type { AppContext } from "../context";
 
 export const productRemoveCallback = async (
@@ -11,6 +8,7 @@ export const productRemoveCallback = async (
 ) => {
   const userId = ctx.from?.id;
   const productId = ctx.match[1];
+  const { db } = ctx;
 
   if (!userId || !productId) {
     await ctx.answerCallbackQuery({
@@ -19,7 +17,7 @@ export const productRemoveCallback = async (
     return;
   }
 
-  await removeUserProduct(ctx.dbClient, { userId, productId });
+  await removeUserProduct(db, { userId, productId });
 
   await ctx.answerCallbackQuery({
     text: "✅ Sikeresen eltávolítottam a terméket a figyelőlistádról",
@@ -30,13 +28,13 @@ export const productRemoveCallback = async (
 };
 
 const removeUserProduct = async (
-  dbClient: DynamoDBClient,
+  db: ICachedDBClient,
   { userId, productId }: { userId: number; productId: string },
 ): Promise<void> => {
   const now = new Date().toISOString();
 
-  await dbClient.send(
-    new UpdateItemCommand({
+  await db.updateItem(
+    {
       TableName: Resource.WatchProductsTable.name,
       Key: {
         userId: { N: userId.toString() },
@@ -47,6 +45,7 @@ const removeUserProduct = async (
         ":deletedAt": { S: now },
         ":now": { S: now },
       },
-    }),
+    },
+    { cacheKey: userId.toString() },
   );
 };

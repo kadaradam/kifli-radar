@@ -1,8 +1,8 @@
-import { type DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
 import type { CommandContext } from "grammy";
 import type { BotCommand } from "grammy/types";
 import { Resource } from "sst";
 import { config } from "~/config";
+import type { ICachedDBClient } from "~/types";
 import { commandName } from "~/utils/commands";
 import type { AppContext } from "../context";
 import { env } from "../env";
@@ -21,6 +21,7 @@ export const startCommand = async (ctx: CommandContext<AppContext>) => {
   const firstName = ctx.from?.first_name;
   const lastName = ctx.from?.last_name;
   const password = ctx.match;
+  const { db } = ctx;
 
   if (!userId || !firstName || !lastName) {
     return;
@@ -55,7 +56,7 @@ export const startCommand = async (ctx: CommandContext<AppContext>) => {
       if (attempts >= config.MAX_LOGIN_ATTEMPTS) {
         // await ctx.banChatMember(userId);
 
-        await createUser(ctx.dbClient, {
+        await createUser(db, {
           userId,
           firstName,
           lastName,
@@ -72,7 +73,7 @@ export const startCommand = async (ctx: CommandContext<AppContext>) => {
 
   ctx.session.userAuthAttempts = 0;
 
-  await createUser(ctx.dbClient, {
+  await createUser(db, {
     userId,
     firstName,
     lastName,
@@ -90,7 +91,7 @@ export const startCommand = async (ctx: CommandContext<AppContext>) => {
 };
 
 async function createUser(
-  dbClient: DynamoDBClient,
+  db: ICachedDBClient,
   {
     userId,
     firstName,
@@ -107,22 +108,20 @@ async function createUser(
 ): Promise<void> {
   const now = new Date().toISOString();
 
-  await dbClient.send(
-    new PutItemCommand({
-      TableName: Resource.UsersTable.name,
-      Item: {
-        id: { N: userId.toString() },
-        firstName: { S: firstName },
-        lastName: { S: lastName },
-        sleepEnabled: { BOOL: true },
-        sleepFrom: { S: "23:00" },
-        sleepTo: { S: "07:00" },
-        timezone: { S: "Europe/Budapest" }, // TODO: Later auto detect timezone
-        ...(authSource && { authSource: { S: authSource } }),
-        ...(isBanned && { isBanned: { BOOL: true } }),
-        createdAt: { S: now },
-        updatedAt: { S: now },
-      },
-    }),
-  );
+  await db.putItem({
+    TableName: Resource.UsersTable.name,
+    Item: {
+      id: { N: userId.toString() },
+      firstName: { S: firstName },
+      lastName: { S: lastName },
+      sleepEnabled: { BOOL: true },
+      sleepFrom: { S: "23:00" },
+      sleepTo: { S: "07:00" },
+      timezone: { S: "Europe/Budapest" },
+      ...(authSource && { authSource: { S: authSource } }),
+      ...(isBanned && { isBanned: { BOOL: true } }),
+      createdAt: { S: now },
+      updatedAt: { S: now },
+    },
+  });
 }

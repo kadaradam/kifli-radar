@@ -2,7 +2,7 @@ import { conversations, createConversation } from "@grammyjs/conversations";
 import { limit } from "@grammyjs/ratelimiter";
 import { Bot, session } from "grammy";
 
-import { KifliService } from "~/services/kifli.service";
+import { KifliService } from "~/services";
 import {
   handleTimezoneCallback,
   productAddCancelCallback,
@@ -40,9 +40,6 @@ const botToken = env.TELEGRAM_BOT_TOKEN;
 const bot = new Bot<AppContext>(botToken);
 const kifliService = new KifliService();
 
-// Global services
-bot.use(db());
-
 bot
   // External plugins
   .use(limit())
@@ -52,8 +49,12 @@ bot
       getSessionKey,
     }),
   )
-  .use(conversations())
-  .use(createConversation(askForDiscountValue(), ASK_FOR_DISCOUNT_VALUE_KEY));
+  .use(conversations());
+
+// Register db client, must be registered after session, and before any service that depends on it
+bot.use(db());
+
+bot.use(createConversation(askForDiscountValue(), ASK_FOR_DISCOUNT_VALUE_KEY));
 
 // Guard middlewares
 bot.use(groupChatGuard()).use(authGuard()).use(conversationGuard());

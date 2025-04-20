@@ -1,15 +1,10 @@
-import type { KifliLastMinuteProduct, KifliProduct } from "~/types";
+import type {
+  IKifliService,
+  KifliLastMinuteProduct,
+  KifliProduct,
+} from "~/types";
 
 const KIFLI_API_URL = "https://kifli.hu/api/v1/";
-
-export interface IKifliService {
-  getProductIdFromUrl(url: string): string | null;
-  buildLastMinuteProductUrl(productId: number): string;
-  getProduct(productId: string): Promise<KifliProduct>;
-  fetchLastMinuteProducts(
-    productIds: number[],
-  ): Promise<KifliLastMinuteProduct[]>;
-}
 
 /**
  * Service class for interacting with the Kifli.hu API

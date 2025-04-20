@@ -1,11 +1,8 @@
-import {
-  type DynamoDBClient,
-  UpdateItemCommand,
-  type UpdateItemCommandOutput,
-} from "@aws-sdk/client-dynamodb";
+import type { UpdateItemCommandOutput } from "@aws-sdk/client-dynamodb";
 import type { Message } from "grammy/types";
 import { Resource } from "sst";
 import tzlookup from "tz-lookup";
+import type { ICachedDBClient } from "~/types";
 import type { AppContext } from "../context";
 
 type Ctx = AppContext & {
@@ -15,10 +12,11 @@ type Ctx = AppContext & {
 export const handleTimezoneCallback = async (ctx: Ctx) => {
   const userId = ctx.from?.id!;
   const { latitude, longitude } = ctx.message.location;
+  const { db } = ctx;
 
   const timezone = tzlookup(latitude, longitude);
 
-  await saveUserTimezone(ctx.dbClient, {
+  await saveUserTimezone(db, {
     userId,
     timezone,
   });
@@ -31,11 +29,11 @@ export const handleTimezoneCallback = async (ctx: Ctx) => {
 };
 
 const saveUserTimezone = async (
-  dbClient: DynamoDBClient,
+  db: ICachedDBClient,
   { userId, timezone }: { userId: number; timezone: string },
 ): Promise<UpdateItemCommandOutput> =>
-  dbClient.send(
-    new UpdateItemCommand({
+  db.updateItem(
+    {
       TableName: Resource.UsersTable.name,
       Key: {
         id: { N: userId.toString() },
@@ -47,5 +45,6 @@ const saveUserTimezone = async (
       ExpressionAttributeValues: {
         ":timezone": { S: timezone },
       },
-    }),
+    },
+    { cacheKey: userId.toString() },
   );

@@ -1,11 +1,7 @@
-import {
-  ConditionalCheckFailedException,
-  type DynamoDBClient,
-  PutItemCommand,
-  UpdateItemCommand,
-} from "@aws-sdk/client-dynamodb";
+import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
 import type { Conversation } from "@grammyjs/conversations";
 import { Resource } from "sst";
+import type { ICachedDBClient } from "~/types";
 import type { AppContext } from "../context";
 
 export const ASK_FOR_DISCOUNT_VALUE_KEY = "askForDiscountValue";
@@ -31,9 +27,9 @@ export const askForDiscountValue =
     }
 
     // Read session data inside a conversation.
-    const [session, dbClient] = await conversation.external((ctx) => [
+    const [session, db] = await conversation.external((ctx) => [
       ctx.session,
-      ctx.dbClient,
+      ctx.db,
     ]);
     const userId = ctx.from?.id;
 
@@ -45,7 +41,7 @@ export const askForDiscountValue =
     const productId = session.userWatchSelectedProduct.id;
     const productName = session.userWatchSelectedProduct.name;
 
-    await createWatchProduct(dbClient, {
+    await createWatchProduct(db, {
       productId,
       productName,
       userId,
@@ -73,7 +69,7 @@ export const askForDiscountValue =
   };
 
 async function createWatchProduct(
-  dbClient: DynamoDBClient,
+  db: ICachedDBClient,
   {
     productId,
     productName,
@@ -90,8 +86,8 @@ async function createWatchProduct(
 
   try {
     // First try to update if item exists and is deleted
-    await dbClient.send(
-      new UpdateItemCommand({
+    await db.updateItem(
+      {
         TableName: Resource.WatchProductsTable.name,
         Key: {
           userId: { N: userId.toString() },
@@ -105,7 +101,8 @@ async function createWatchProduct(
           ":minDiscountPercentage": { N: minDiscountPercentage.toString() },
           ":isActive": { S: "true" },
         },
-      }),
+      },
+      { cacheKey: userId.toString() },
     );
   } catch (error) {
     if (
@@ -113,8 +110,8 @@ async function createWatchProduct(
       ConditionalCheckFailedException /* && error.name === "ConditionalCheckFailedException" */
     ) {
       // If item doesn't exist or isn't deleted, create new item
-      await dbClient.send(
-        new PutItemCommand({
+      await db.putItem(
+        {
           TableName: Resource.WatchProductsTable.name,
           Item: {
             productId: { N: productId.toString() },
@@ -124,7 +121,8 @@ async function createWatchProduct(
             createdAt: { S: now },
             updatedAt: { S: now },
           },
-        }),
+        },
+        { cacheKey: userId.toString() },
       );
     } else {
       throw error;

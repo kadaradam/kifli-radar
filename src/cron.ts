@@ -11,7 +11,7 @@ import type { APIGatewayProxyResult } from "aws-lambda";
 import { Api } from "grammy";
 import { Resource } from "sst";
 import { config } from "~/config";
-import { KifliService } from "~/services/kifli.service";
+import { KifliService } from "~/services";
 import type {
   KifliLastMinuteProduct,
   ProductAnalytics,

@@ -1,8 +1,7 @@
-import { type DynamoDBClient, QueryCommand } from "@aws-sdk/client-dynamodb";
 import { type CommandContext, InlineKeyboard } from "grammy";
 import type { BotCommand } from "grammy/types";
 import { Resource } from "sst";
-import type { IKifliService } from "~/services/kifli.service";
+import type { ICachedDBClient, IKifliService, WatchProduct } from "~/types";
 import { commandName } from "~/utils/commands";
 import type { AppContext } from "../context";
 
@@ -19,6 +18,7 @@ export const addCommand =
   (kifliService: IKifliService) => async (ctx: CommandContext<AppContext>) => {
     const userId = ctx.from?.id;
     const url = ctx.match;
+    const { db } = ctx;
 
     if (!userId || !url) {
       await ctx.reply("Cimbi, link nélkül nem tudok mit csinálni! 😅");
@@ -41,7 +41,7 @@ export const addCommand =
     const productImage = product.images[0];
 
     if (
-      await isProductAlreadyWatched(ctx.dbClient, {
+      await isProductAlreadyWatched(db, {
         userId,
         productId: processedProductId,
       })
@@ -77,11 +77,11 @@ export const addCommand =
   };
 
 const isProductAlreadyWatched = async (
-  dbClient: DynamoDBClient,
+  db: ICachedDBClient,
   { userId, productId }: { userId: number; productId: number },
 ): Promise<boolean> => {
-  const product = await dbClient.send(
-    new QueryCommand({
+  const product = await db.query<Pick<WatchProduct, "userId">>(
+    {
       TableName: Resource.WatchProductsTable.name,
       KeyConditionExpression: "productId = :pid AND userId = :uid",
       FilterExpression: "attribute_not_exists(deletedAt)",
@@ -91,8 +91,9 @@ const isProductAlreadyWatched = async (
       },
       Limit: 1,
       ProjectionExpression: "userId",
-    }),
+    },
+    { cacheKey: userId.toString() },
   );
 
-  return !!product.Items?.length;
+  return !!product?.length;
 };

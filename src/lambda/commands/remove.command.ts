@@ -1,9 +1,7 @@
-import { type DynamoDBClient, QueryCommand } from "@aws-sdk/client-dynamodb";
-import { unmarshall } from "@aws-sdk/util-dynamodb";
 import { type CommandContext, InlineKeyboard } from "grammy";
 import type { BotCommand } from "grammy/types";
 import { Resource } from "sst";
-import type { WatchProduct } from "~/types";
+import type { ICachedDBClient, WatchProduct } from "~/types";
 import { commandName } from "~/utils/commands";
 import type { AppContext } from "../context";
 
@@ -18,10 +16,13 @@ export const removeCommandInfo: BotCommand = {
 
 export const removeCommand = async (ctx: CommandContext<AppContext>) => {
   const userId = ctx.from?.id;
+  const { db } = ctx;
 
-  if (!userId) return;
+  if (!userId) {
+    return;
+  }
 
-  const products = await getUserProducts(ctx.dbClient, userId);
+  const products = await getUserProducts(db, userId);
 
   if (!products.length) {
     return ctx.reply("✨ Nincs figyelni való termék a listádon.");
@@ -58,11 +59,11 @@ export const removeCommand = async (ctx: CommandContext<AppContext>) => {
 };
 
 const getUserProducts = async (
-  dbClient: DynamoDBClient,
+  db: ICachedDBClient,
   userId: number,
 ): Promise<WatchProduct[]> => {
-  const products = await dbClient.send(
-    new QueryCommand({
+  return db.query<WatchProduct>(
+    {
       TableName: Resource.WatchProductsTable.name,
       IndexName: "userProductsIndex",
       KeyConditionExpression: "userId = :uid",
@@ -71,8 +72,7 @@ const getUserProducts = async (
         ":uid": { N: userId.toString() },
       },
       ProjectionExpression: "productId, productName",
-    }),
+    },
+    { cacheKey: userId.toString() },
   );
-
-  return products.Items?.map((item) => unmarshall(item) as WatchProduct) ?? [];
 };
