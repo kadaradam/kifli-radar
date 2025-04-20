@@ -3,7 +3,7 @@ import { setupWebhook } from "../src/lambda/setup";
 
 const args = process.argv.slice(2);
 const urlArgIndex = args.findIndex((arg) => arg === "--url");
-const url = urlArgIndex !== -1 ? args[urlArgIndex + 1] : undefined;
+const url = urlArgIndex !== -1 ? args[urlArgIndex + 1].trim() : undefined;
 
 // Validate url
 if (!url || !url.startsWith("https://")) {
