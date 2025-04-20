@@ -5,7 +5,7 @@
   "scripts": {
     "build": "tsc",
     "dev:webhook": "tsc --watch src/lambda/dev.ts --outDir ./dist",
-    "sst:init": "ts-node --transpile-only -r tsconfig-paths/register src/scripts/init.ts",
+    "setup-bot": "ts-node --transpile-only -r tsconfig-paths/register ./scripts/setup-bot.ts",
     "format": "biome format --write .",
     "lint": "biome lint .",
     "check": "biome check --write .",
