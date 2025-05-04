@@ -1,0 +1,50 @@
+name: Lint Pull Request
+
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+    lint_pr:
+        runs-on: ubuntu-latest
+
+        steps:
+            # Checkout
+            - uses: actions/checkout@v3
+
+            # Install pnpm
+            - name: Install specific pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: '8.15.4'
+
+            # Node Install
+            - name: Set up Node.js
+              uses: actions/setup-node@v3
+              with:
+                node-version: 22.13.0
+                cache: 'pnpm'
+
+             # Install dependencies
+            - name: Install dependencies
+              run: pnpm install
+
+            # pnpm Lint
+            - name: Lint source files
+              run: pnpm run lint
+
+            # pnpm Biome check
+            - name: Run biome check
+              run: pnpm run check
+
+            # pnpm Biome check
+            - name: Run typescript check
+              run: pnpm run typecheck
+
+            # pnpm Test
+            - name: Run tests
+              run: pnpm run test
