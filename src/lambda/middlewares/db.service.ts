@@ -24,7 +24,13 @@ export const db = () => async (ctx: AppContext, next: NextFunction) => {
 
 const getCacheAdapter = (cacheMemory: CacheMemory): CacheAdapter => {
   if (env.CACHE_DRIVER === "redis") {
-    const redis = RedisClient.getInstance();
+    const redis = RedisClient.getInstance({
+      host: env.REDIS_HOST,
+      port: env.REDIS_PORT,
+      password: env.REDIS_PASSWORD,
+      username: env.REDIS_USERNAME,
+      db: env.REDIS_DB,
+    });
     return new RedisCacheAdapter(redis);
   }
 

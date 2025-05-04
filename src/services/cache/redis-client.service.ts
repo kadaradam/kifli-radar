@@ -1,20 +1,13 @@
-import Redis from "ioredis";
-import { env } from "~/lambda/env";
+import Redis, { type RedisOptions } from "ioredis";
 
 export class RedisClient {
   private static instance: Redis;
 
   private constructor() {}
 
-  public static getInstance(): Redis {
+  public static getInstance(options: RedisOptions): Redis {
     if (!RedisClient.instance) {
-      RedisClient.instance = new Redis({
-        host: env.REDIS_HOST,
-        port: env.REDIS_PORT,
-        password: env.REDIS_PASSWORD,
-        username: env.REDIS_USERNAME,
-        db: env.REDIS_DB,
-      });
+      RedisClient.instance = new Redis(options);
 
       RedisClient.instance.on("connect", () => {
         console.info("Connected to Redis successfully");
