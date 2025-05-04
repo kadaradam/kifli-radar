@@ -2,8 +2,8 @@ import type { CommandContext } from "grammy";
 import type { BotCommand } from "grammy/types";
 import { Resource } from "sst";
 import { config } from "~/config";
+import { commandName } from "~/lambda/utils";
 import type { ICachedDBClient } from "~/types";
-import { commandName } from "~/utils/commands";
 import type { AppContext } from "../context";
 import { env } from "../env";
 

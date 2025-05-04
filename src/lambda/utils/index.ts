@@ -1,0 +1,1 @@
+export { commandName } from "./commands";

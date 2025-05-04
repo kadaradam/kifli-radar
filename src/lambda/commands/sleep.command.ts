@@ -2,8 +2,8 @@ import type { UpdateItemCommandOutput } from "@aws-sdk/client-dynamodb";
 import type { CommandContext } from "grammy";
 import type { BotCommand } from "grammy/types";
 import { Resource } from "sst";
+import { commandName } from "~/lambda/utils";
 import type { ICachedDBClient, User } from "~/types";
-import { commandName } from "~/utils/commands";
 import type { AppContext } from "../context";
 
 // Command name

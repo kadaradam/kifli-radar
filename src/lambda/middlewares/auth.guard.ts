@@ -1,7 +1,7 @@
 import type { NextFunction } from "grammy";
 import { Resource } from "sst";
+import { commandName } from "~/lambda/utils";
 import type { ICachedDBClient, User } from "~/types";
-import { commandName } from "~/utils/commands";
 import { START_COMMAND_KEY } from "../commands";
 import type { AppContext } from "../context";
 
