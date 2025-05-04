@@ -1,6 +1,5 @@
 import {
   BatchWriteItemCommand,
-  type BatchWriteItemCommandOutput,
   DynamoDBClient,
   ScanCommand,
   UpdateItemCommand,
@@ -26,7 +25,9 @@ const kifliService = new KifliService();
 const MAX_BATCH_SIZE = 25;
 
 export const handler = async (): Promise<APIGatewayProxyResult> => {
-  console.log("Cron job triggered at", new Date().toISOString());
+  const now = new Date().toISOString();
+
+  console.log("Cron job triggered at", now);
 
   try {
     const [watchProducts, users] = await Promise.all([
@@ -45,11 +46,12 @@ export const handler = async (): Promise<APIGatewayProxyResult> => {
 
     await Promise.all([
       processUserNotifications(
+        now,
         users,
         watchProducts,
         availableDiscountedProducts,
       ),
-      processProductAnalytics(availableDiscountedProducts),
+      processProductAnalytics(now, availableDiscountedProducts),
     ]);
 
     return {
@@ -72,6 +74,7 @@ export const handler = async (): Promise<APIGatewayProxyResult> => {
 };
 
 async function processUserNotifications(
+  now: string,
   users: Pick<
     User,
     "id" | "sleepEnabled" | "sleepFrom" | "sleepTo" | "timezone"
@@ -107,20 +110,22 @@ async function processUserNotifications(
     }
 
     totalNotificationsSent += products.length;
-    await sendUserNotification(userId, products);
+    await sendUserNotification(now, userId, products);
   }
 
   console.log(`Sent total of ${totalNotificationsSent} notifications`);
 }
 
 async function sendUserNotification(
+  now: string,
   userId: string,
   products: KifliLastMinuteProduct[],
 ): Promise<void> {
-  if (products.length === 0) return;
+  if (!products.length) {
+    return;
+  }
 
   const messageText = buildNotificationMessage(products);
-  const now = new Date().toISOString();
   const productIds = products.map((product) => product.productId);
 
   // Send the message first
@@ -181,7 +186,9 @@ function findProductsWithRelevantDiscounts(
         return false;
       }
 
-      const discountPercentage = (1 - salePrice / originalPrice) * 100;
+      const discountPercentage = Math.round(
+        (1 - salePrice / originalPrice) * 100,
+      );
       return discountPercentage >= watchItem.minDiscountPercentage;
     })
     .reduce((acc: Record<string, KifliLastMinuteProduct[]>, product) => {
@@ -208,10 +215,9 @@ function findProductsWithRelevantDiscounts(
 }
 
 async function processProductAnalytics(
+  now: string,
   products: KifliLastMinuteProduct[],
-): Promise<BatchWriteItemCommandOutput> {
-  const now = new Date().toISOString();
-
+): Promise<void> {
   const analyticsData = products.reduce((acc: ProductAnalytics[], product) => {
     const salePrice = product.prices.salePrice;
     const originalPrice = product.prices.originalPrice;
@@ -322,6 +328,10 @@ async function fetchUsers(): Promise<
     }),
   );
 
+  if (!result) {
+    return [];
+  }
+
   return result.Items?.map((item) => unmarshall(item) as User) ?? [];
 }
 
@@ -335,6 +345,10 @@ async function fetchWatchProducts(): Promise<WatchProduct[]> {
         "productId, productName, userId, minDiscountPercentage, lastNotifiedAt",
     }),
   );
+
+  if (!result) {
+    return [];
+  }
 
   return result.Items?.map((item) => unmarshall(item) as WatchProduct) ?? [];
 }

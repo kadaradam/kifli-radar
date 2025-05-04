@@ -1,3 +1,4 @@
+export * from "./AppConfig.type";
 export * from "./Cache.type";
 export * from "./interfaces/CacheAdapter.interface";
 export * from "./interfaces/CachedDBClient.interface";

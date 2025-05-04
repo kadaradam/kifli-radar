@@ -1,8 +1,4 @@
-interface AppConfig {
-  MAX_LOGIN_ATTEMPTS: number;
-  NEW_NOTIFICATION_THRESHOLD_IN_HOURS: number;
-  MIN_DISCOUNT_PERCENTAGE_FOR_ANALYTICS: number;
-}
+import type { AppConfig } from "./types";
 
 export const config: AppConfig = {
   MAX_LOGIN_ATTEMPTS: 5,

@@ -3,8 +3,8 @@ export interface WatchProduct {
   productId: number;
   productName: string;
   minDiscountPercentage: number;
-  isDeleted?: boolean;
-  lastNotifiedAt?: Date;
+  deletedAt?: string;
+  lastNotifiedAt?: string;
   createdAt: Date;
   updatedAt: Date;
 }

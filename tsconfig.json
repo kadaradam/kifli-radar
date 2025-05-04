@@ -17,8 +17,8 @@
     "paths": {
       "~/*": ["./src/*"]
     },
-    "types": ["node"]
+    "types": ["node", "jest"]
   },
   "include": ["src/**/*", "sst-env.d.ts", "scripts/**/*"],
-  "exclude": ["node_modules", "dist", "sst.config.js"]
+  "exclude": ["node_modules", "dist", "sst.config.js", "src/testing"]
 }

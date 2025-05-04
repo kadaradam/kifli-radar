@@ -8,7 +8,7 @@ export interface User {
   timezone: string;
   authSource?: string;
   isBanned?: boolean;
-  lastNotifiedAt?: Date;
+  lastNotifiedAt?: string;
   createdAt: Date;
   updatedAt: Date;
 }
