@@ -39,6 +39,11 @@ export class KifliService implements IKifliService {
    */
   public async getProduct(productId: string) {
     const request = await fetch(`${KIFLI_API_URL}/products/${productId}`);
+
+    if (!request.ok || request.status === 404) {
+      return null;
+    }
+
     const data = (await request.json()) as KifliProduct;
     return data;
   }
@@ -50,6 +55,10 @@ export class KifliService implements IKifliService {
    */
   // TODO: Handle multiple requests if there are more products
   public async fetchLastMinuteProducts(productIds: number[]) {
+    if (!productIds.length) {
+      return [];
+    }
+
     const productIdsQs = productIds.join("&products=");
 
     const request = await fetch(

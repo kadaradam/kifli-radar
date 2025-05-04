@@ -15,6 +15,14 @@ export const mockFetch = (
   );
 };
 
+export const mockFetchError = () => {
+  global.fetch = jest.fn();
+
+  (global.fetch as jest.Mock).mockImplementationOnce(() =>
+    Promise.reject(new Error("Failed to fetch due API error")),
+  );
+};
+
 export const mockCryptoUUID = (mockUUID: string) => {
   jest
     .spyOn(crypto, "randomUUID")

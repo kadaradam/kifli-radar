@@ -6,6 +6,7 @@ import {
   type KifliLmProductFactoryArgs,
   UserFactory,
   type UserFactoryArgs,
+  WatchProductFactory,
   type WatchProductFactoryArgsWithoutUserId,
 } from "./testing/factories";
 
@@ -27,6 +28,7 @@ import {
   expectSuccessLambdaResponse,
   mockCryptoUUID,
   mockFetch,
+  mockFetchError,
 } from "./testing/utils";
 import {
   expectNoProductAnalyticsInserted,
@@ -68,15 +70,29 @@ describe("Cron Handler", () => {
     });
 
     it("should handle fetch errors gracefully", async () => {
-      // Mock an error in fetchWatchProducts
-      mockFetch([
-        {
-          ok: false,
-          json: async () => {
-            throw new Error("Failed to fetch due API error");
-          },
-        },
-      ]);
+      const mockWatchProducts = new WatchProductFactory({
+        userId: 1,
+        productId: 123,
+        productName: "Test Product",
+        minDiscountPercentage: 20,
+        lastNotifiedAt: undefined,
+      }).build();
+
+      dynamodbMock
+        .on(ScanCommand, {
+          TableName: mockedResources.WatchProductsTable.name,
+        })
+        .resolves({
+          Items: mockWatchProducts.map((product) =>
+            marshall(product, {
+              removeUndefinedValues: true,
+              convertClassInstanceToMap: true,
+            }),
+          ),
+        });
+
+      // Mock an error in fetchLastMinuteProducts
+      mockFetchError();
 
       const result = await handler();
 

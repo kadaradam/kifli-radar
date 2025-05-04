@@ -36,6 +36,13 @@ export const addCommand =
 
     const product = await kifliService.getProduct(productId);
 
+    if (!product) {
+      await ctx.reply(
+        "Hoppá, ez nem egy jó Kifli link! Nézz rá még egyszer, hogy biztos jó linket adtál-e! 🔍",
+      );
+      return;
+    }
+
     const processedProductId = product.id;
     const productName = product.name;
     const productImage = product.images[0];
