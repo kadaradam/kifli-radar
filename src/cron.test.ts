@@ -1,6 +1,7 @@
 import { DynamoDBClient, ScanCommand } from "@aws-sdk/client-dynamodb";
 import { marshall } from "@aws-sdk/util-dynamodb";
 import { mockClient } from "aws-sdk-client-mock";
+import { config } from "./config"; // Corrected import path
 import {
   KifliLmProductFactory,
   type KifliLmProductFactoryArgs,
@@ -585,6 +586,50 @@ describe("Cron Handler", () => {
         const result = await handler();
 
         assertNoNotificationSent(result, { expectAnalytics: false });
+      });
+    });
+
+    describe("when minimum analytics discount percentage is not met", () => {
+      it("should send notification and not save analytics", async () => {
+        const analyticsThreshold = config.MIN_DISCOUNT_PERCENTAGE_FOR_ANALYTICS; // Currently 10
+        const actualDiscountPercentage = analyticsThreshold - 1; // e.g., 9%
+        const userMinDiscountPercentage = 5; // User wants >= 5%
+        const originalPrice = 1000;
+        const salePrice = originalPrice * (1 - actualDiscountPercentage / 100); // e.g., 910
+
+        const userConfig = {
+          id: 1,
+          sleepEnabled: false,
+        };
+        const watchProductConfig = {
+          productId: 123,
+          productName: "Test Product Low Discount",
+          minDiscountPercentage: userMinDiscountPercentage, // User threshold met
+          lastNotifiedAt: undefined,
+        };
+        const kifliProductConfig: KifliLmProductFactoryArgs = {
+          productId: 123,
+          name: "Test Product Low Discount",
+          maxAvailableAmount: 5,
+          originalPrice: originalPrice,
+          salePrice: salePrice, // Actual discount is below analytics threshold
+        };
+
+        setupNotificationTest({
+          userConfig,
+          watchProductConfig,
+          kifliProductConfig,
+        });
+        const result = await handler();
+
+        // Expect notification AND no analytics entry
+        expectSuccessLambdaResponse(result);
+        expect(sendMessageSpy).toHaveBeenCalledTimes(1);
+        expectUserLastNotifiedAtUpdated(dynamodbMock, userConfig.id);
+        expectProductLastNotifiedAtUpdated(dynamodbMock, [
+          { userId: userConfig.id, productId: watchProductConfig.productId },
+        ]);
+        expectNoProductAnalyticsInserted(dynamodbMock);
       });
     });
   });
