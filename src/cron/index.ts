@@ -9,14 +9,14 @@ import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import type { APIGatewayProxyResult } from "aws-lambda";
 import { Api } from "grammy";
 import { Resource } from "sst";
-import { config } from "~/config";
+import { config } from "~/cron/config";
 import { KifliService } from "~/services";
 import type {
   KifliLastMinuteProduct,
   ProductAnalytics,
   User,
   WatchProduct,
-} from "./types";
+} from "../types";
 
 const api = new Api(process.env.TELEGRAM_BOT_TOKEN!);
 const dbClient = new DynamoDBClient();
@@ -247,6 +247,10 @@ async function processProductAnalytics(
 
     return acc;
   }, []);
+
+  console.log(
+    `Inserting ${analyticsData.length} products into analytics table`,
+  );
 
   return insertAnalytics(analyticsData);
 }

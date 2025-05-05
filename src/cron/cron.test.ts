@@ -1,7 +1,6 @@
 import { DynamoDBClient, ScanCommand } from "@aws-sdk/client-dynamodb";
 import { marshall } from "@aws-sdk/util-dynamodb";
 import { mockClient } from "aws-sdk-client-mock";
-import { config } from "./config"; // Corrected import path
 import {
   KifliLmProductFactory,
   type KifliLmProductFactoryArgs,
@@ -9,7 +8,8 @@ import {
   type UserFactoryArgs,
   WatchProductFactory,
   type WatchProductFactoryArgsWithoutUserId,
-} from "./testing/factories";
+} from "../testing/factories";
+import { config } from "./config";
 
 // Create a spy we can check later
 const sendMessageSpy = jest.fn();
@@ -23,14 +23,14 @@ jest.mock("grammy", () => ({
 const dynamodbMock = mockClient(DynamoDBClient);
 
 // Import the handler after mocking dependencies
-import { handler } from "./cron";
-import { mockedResources } from "./testing/constants";
+import { handler } from ".";
+import { mockedResources } from "../testing/constants";
 import {
   expectSuccessLambdaResponse,
   mockCryptoUUID,
   mockFetch,
   mockFetchError,
-} from "./testing/utils";
+} from "../testing/utils";
 import {
   expectNoProductAnalyticsInserted,
   expectNoProductUpdates,
@@ -38,7 +38,7 @@ import {
   expectProductAnalyticsInserted,
   expectProductLastNotifiedAtUpdated,
   expectUserLastNotifiedAtUpdated,
-} from "./testing/utils/dynamo.utils";
+} from "../testing/utils/dynamo.utils";
 
 describe("Cron Handler", () => {
   beforeEach(() => {

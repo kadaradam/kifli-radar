@@ -103,7 +103,7 @@ export default $config({
     new sst.aws.Cron("FetchProductsCron", {
       schedule: "rate(30 minutes)",
       function: {
-        handler: "src/cron.handler",
+        handler: "src/cron/index.handler",
         timeout: "30 seconds",
         memory: "128 MB",
         link: [usersTable, watchProductsTable, productAnalyticsTable],
