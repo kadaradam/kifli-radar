@@ -1,4 +1,4 @@
-export type { AppConfig } from "./AppConfig.type";
+export type { AppCronConfig, AppWebhookConfig } from "./AppConfig.type";
 export type { CacheItem, CacheMemory, CacheOptions } from "./Cache.type";
 export type { CacheAdapter } from "./interfaces/CacheAdapter.interface";
 export type { ICachedDBClient } from "./interfaces/CachedDBClient.interface";
