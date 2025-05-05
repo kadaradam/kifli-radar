@@ -38,7 +38,7 @@ const envSchema = z.object({
     .transform(Number)
     .optional()
     .describe("Redis database"),
-  ENV: z
+  NODE_ENV: z
     .enum(["development", "staging", "production"])
     .default("development")
     .describe("Environment"),

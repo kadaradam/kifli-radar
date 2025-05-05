@@ -9,7 +9,6 @@ import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import type { APIGatewayProxyResult } from "aws-lambda";
 import { Api } from "grammy";
 import { Resource } from "sst";
-import { config } from "~/cron/config";
 import { KifliService } from "~/services";
 import type {
   KifliLastMinuteProduct,
@@ -17,12 +16,12 @@ import type {
   User,
   WatchProduct,
 } from "../types";
+import { config } from "./config";
+import { env } from "./env";
 
-const api = new Api(process.env.TELEGRAM_BOT_TOKEN!);
+const api = new Api(env.TELEGRAM_BOT_TOKEN);
 const dbClient = new DynamoDBClient();
 const kifliService = new KifliService();
-
-const MAX_BATCH_SIZE = 25;
 
 export const handler = async (): Promise<APIGatewayProxyResult> => {
   const now = new Date().toISOString();
@@ -400,7 +399,7 @@ async function insertAnalytics(analytics: ProductAnalytics[]): Promise<void> {
 
   // Handle item batching
   const chunks = analytics.reduce((acc: ProductAnalytics[][], item, index) => {
-    const chunkIndex = Math.floor(index / MAX_BATCH_SIZE);
+    const chunkIndex = Math.floor(index / config.ANALYTICS_MAX_BATCH_SIZE);
 
     if (!acc[chunkIndex]) {
       acc[chunkIndex] = [];
