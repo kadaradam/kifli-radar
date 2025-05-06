@@ -39,7 +39,7 @@ const envSchema = z.object({
     .optional()
     .describe("Redis database"),
   NODE_ENV: z
-    .enum(["development", "staging", "production"])
+    .enum(["development", "test", "staging", "production"])
     .default("development")
     .describe("Environment"),
   ...(process.env.NODE_ENV === "development" && {

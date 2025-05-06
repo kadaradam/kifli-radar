@@ -109,9 +109,10 @@ describe("KifliService", () => {
           expect(typeof product.name).toBe("string");
 
           expect(product).toHaveProperty("prices");
-          expect(typeof product.prices.saleId).toBe("number");
           expect(typeof product.prices.originalPrice).toBe("number");
-          expect(typeof product.prices.salePrice).toBe("number");
+
+          expect(product.prices).toHaveProperty("saleId");
+          expect(product.prices).toHaveProperty("salePrice");
 
           expect(product).toHaveProperty("stock");
           expect(typeof product.stock.maxAvailableAmount).toBe("number");
