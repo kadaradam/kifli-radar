@@ -6,6 +6,7 @@ on:
 jobs:
   production-deployment:
     runs-on: ubuntu-latest
+    environment: production
     steps:
       # Checkout
       - uses: actions/checkout@v3

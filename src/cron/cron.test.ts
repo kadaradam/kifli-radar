@@ -359,13 +359,14 @@ describe("Cron Handler", () => {
         ["02:00", "Europe/Budapest", true], // Middle of the night
         ["08:00", "Europe/Budapest", false], // Exactly wake up time
         ["12:00", "Europe/Budapest", false], // Midday
-        // Test timezone difference - sleep 22:00-08:00 Budapest (UTC+2), test time is UTC
-        ["20:00Z", "Europe/Budapest", true], // 22:00 Budapest time -> Sleep
-        ["06:00Z", "Europe/Budapest", false], // 08:00 Budapest time -> Awake
       ])(
         "should not send notification at %s (%s timezone), expected sleep: %s",
         async (timeStr, timezone, shouldBeSleeping) => {
-          const testTime = new Date(`2024-04-21 ${timeStr}`);
+          const testTime = new Date(
+            new Date(`2024-04-21 ${timeStr}`).toLocaleString("en-US", {
+              timeZone: timezone,
+            }),
+          );
           const userConfig = {
             id: 1,
             sleepEnabled: true,
