@@ -48,3 +48,9 @@ jobs:
             # pnpm Test
             - name: Run tests
               run: pnpm run test
+              env:
+                NODE_ENV: test
+                TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+                APP_PASSWORDS: ${{ env.APP_PASSWORDS }}
+                AUTH_DISABLED: ${{ env.AUTH_DISABLED }}
+                CACHE_DRIVER: ${{ env.CACHE_DRIVER }}

@@ -42,9 +42,8 @@ jobs:
           pnpm exec sst install
           pnpm exec sst deploy --stage production
         env:
-          EXCHANGE_HOST: ${{ secrets.EXCHANGE_HOST }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          APP_PASSWORDS: ${{ secrets.APP_PASSWORDS }}
           NODE_ENV: production
-          AUTH_DISABLED: "false"
-          CACHE_DRIVER: memory
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          APP_PASSWORDS: ${{ env.APP_PASSWORDS }}
+          AUTH_DISABLED: ${{ env.AUTH_DISABLED }}
+          CACHE_DRIVER: ${{ env.CACHE_DRIVER }}
