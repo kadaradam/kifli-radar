@@ -41,6 +41,11 @@ import {
 } from "../testing/utils/dynamo.utils";
 
 describe("Cron Handler", () => {
+  beforeAll(() => {
+    // Set timezone to UTC for all tests before any date operations
+    process.env.TZ = "UTC";
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     dynamodbMock.reset();
@@ -362,11 +367,13 @@ describe("Cron Handler", () => {
       ])(
         "should not send notification at %s (%s timezone), expected sleep: %s",
         async (timeStr, timezone, shouldBeSleeping) => {
+          // Convert Budapest time to UTC (Budapest is UTC+2)
+          const [hours, minutes] = timeStr.split(":").map(Number);
+          const utcHours = (hours - 2 + 24) % 24; // TODO: Support other timezones
           const testTime = new Date(
-            new Date(`2024-04-21 ${timeStr}`).toLocaleString("en-US", {
-              timeZone: timezone,
-            }),
+            Date.UTC(2024, 3, 21, utcHours, minutes, 0),
           );
+
           const userConfig = {
             id: 1,
             sleepEnabled: true,
